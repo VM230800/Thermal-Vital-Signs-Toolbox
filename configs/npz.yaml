@@ -1,1 +1,53 @@
+# ─────────────────────────────────────────────────────────────────
+# NPZ Thermal Dataset (Betreuer) – Konfiguration
+# ─────────────────────────────────────────────────────────────────
+#
+# Erwartete Verzeichnisstruktur:
+#   IRData/
+#   ├── 005/
+#   │   ├── synchronized_data_0.npz
+#   │   ├── synchronized_data_1.npz
+#   │   └── ...
+#   ├── 006/
+#   │   └── ...
+#   └── 027/
+#       └── ...
+#
+# Inhalt jeder .npz-Datei:
+#   array1: (N, 768, 1024) float32  – Thermalframes in °C
+#   array2: (N,) float64            – Zeitstempel (zur FPS-Berechnung)
+#   array4: (N,) float64            – Puls-Rohsignal
+#   array5: (N,) float64            – Atem-Rohsignal
+#
+# Hinweis: HR und RR liegen als Rohsignale vor und müssen
+#          per Peak-Detection in der Pipeline berechnet werden.
+# ─────────────────────────────────────────────────────────────────
 
+dataset_path: "C:/Users/linat/OneDrive/Dokumente/Uni/Master/2. Semester/Projektseminar/IRData"
+
+# Subject- und Recording-Filter (null = alle verfügbaren laden)
+subject_id: null        # z.B. "005" oder ["005", "006"]
+recording_id: null      # z.B. 0 oder [0, 1, 5]
+
+# ── Videoparameter ──
+# FPS wird aus den Zeitstempeln (array2) berechnet.
+# Dieser Wert dient nur als Fallback, falls die Berechnung fehlschlägt.
+fps: 30
+
+# Auflösung der Thermalframes (nur zur Dokumentation, wird aus Daten gelesen)
+frame_width: 1024       # [Pixel]
+frame_height: 768       # [Pixel]
+
+# ── Physiologie ──
+# Rohsignale – keine fertigen BPM-Werte vorhanden.
+# Die Pipeline muss Peak-Detection auf pulse_signal und resp_signal anwenden.
+signal_type: "raw"      # "raw" = Rohsignal, "bpm" = fertige BPM-Werte (wie bei BP4D+)
+
+# Abtastrate der Physiologie-Signale.
+# Da die Signale frame-synchron in der .npz liegen,
+# entspricht die Physio-Abtastrate der Video-FPS.
+physio_fs: null         # wird zur Laufzeit aus FPS übernommen
+
+# ── Vorverarbeitung ──
+# Thermalkamera braucht ggf. Anlaufzeit bis stabile Temperaturwerte vorliegen.
+warmup_seconds: 10
