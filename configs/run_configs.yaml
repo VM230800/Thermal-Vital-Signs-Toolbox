@@ -4,7 +4,7 @@
 
 # ── Datensatz ──
 dataset: "bp4d"                         # "bp4d" oder "npz"
-dataset_config: "configs/bp4d.yaml"
+dataset_config: "configs/BP4DPlus.yaml"
 
 # ── Gesichtserkennung (YOLO) ──
 detection:
