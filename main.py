@@ -21,6 +21,7 @@ import argparse
 import os
 import time
 import warnings
+import pandas as pd
 
 import numpy as np
 import yaml
@@ -295,19 +296,19 @@ def run_pipeline(config_path="configs/run_config.yaml"):
     print(f"{'=' * 60}")
 
      # ── Per-Sample CSV ──────────────────────────────────────  NEU
-    import pandas as pd                                       # NEU
-                                                              # NEU
-    all_rows = []                                             # NEU
-    for method_name, results in all_results.items():          # NEU
-        for r in results:                                     # NEU
-            all_rows.append(r)                                # NEU
-                                                              # NEU
-    if all_rows:                                              # NEU
-        df = pd.DataFrame(all_rows)                           # NEU
-        sample_csv = os.path.join(save_dir,                   # NEU
-                                  "per_sample_results.csv")   # NEU
-        df.to_csv(sample_csv, index=False)                    # NEU
-        print(f"Per-sample results: {sample_csv}")            # NEU
+    # ── Per-Sample CSV ──
+    
+
+    all_rows = []
+    for method_name, results in all_results.items():
+        for r in results:
+            all_rows.append(r)
+
+    if all_rows:
+        df = pd.DataFrame(all_rows)
+        sample_csv = os.path.join(save_dir, "per_sample_results.csv")
+        df.to_csv(sample_csv, index=False)
+        print(f"Per-sample results: {sample_csv}")
 
     # ── Evaluate ──
     dataset_name = config["dataset"].upper()
