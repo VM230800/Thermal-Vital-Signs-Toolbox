@@ -1,19 +1,21 @@
-"""Quick test with only 200 frames."""
+"""Quick test with only 100 frames – all 3 methods."""
 import numpy as np
 import yaml
 from data.bp4d_loader import BP4DDataset
 from utils.yolo_processing import process_with_yolo
 from preprocessing.roi_extraction import compute_rois
 from methods.thermal_mean import ThermalMeanMethod
+from methods.ica import ICAMethod
+from methods.garbey import GarbeyMethod
 
-# Load config
+# ── Load config ──
 with open("configs/run_config.yaml") as f:
     config = yaml.safe_load(f)
 
-# Load dataset
 with open("configs/bp4d.yaml") as f:
     ds_config = yaml.safe_load(f)
 
+# ── Load dataset ──
 dataset = BP4DDataset(
     root_dir=ds_config["root_dir"],
     subjects=["F001"],
@@ -23,12 +25,14 @@ dataset = BP4DDataset(
 
 sample = dataset[0]
 
-# ── NUR 200 Frames nehmen ──
-frames = sample["frames"][:200]
+# ── NUR 100 Frames ──
+frames = sample["frames"][:100]
+fps = sample["fps"]
 print(f"Frames: {frames.shape}, {frames.dtype}")
 print(f"RAM: ~{frames.nbytes / 1e6:.0f} MB")
+print(f"Dauer: {len(frames)/fps:.1f}s bei {fps} FPS")
 
-# YOLO
+# ── YOLO ──
 det = config["detection"]
 cropped, keypoints = process_with_yolo(
     frames,
@@ -37,7 +41,7 @@ cropped, keypoints = process_with_yolo(
     padding=det.get("padding", 50),
 )
 
-# ROIs
+# ── ROIs ──
 rois_per_frame = []
 for i in range(len(keypoints)):
     kp = keypoints[i]
@@ -49,12 +53,52 @@ for i in range(len(keypoints)):
 n_ok = sum(1 for r in rois_per_frame if r is not None)
 print(f"YOLO: {n_ok}/{len(keypoints)} frames with keypoints")
 
-# Thermal Mean
-method = ThermalMeanMethod(
+# ── Ground Truth ──
+gt_hr = sample["hr_bpm"]
+gt_rr = sample["rr_bpm"]
+print(f"\nGround Truth: HR={gt_hr:.1f} BPM, RR={gt_rr:.1f} BPM")
+print(f"{'─' * 50}")
+
+# ── Methode 1: Thermal Mean ──
+print("\n1. Thermal Mean:")
+tm = ThermalMeanMethod(
     config["methods"]["thermal_mean"],
     config["signal"],
 )
-result = method.estimate(cropped, rois_per_frame, sample["fps"])
-print(f"HR: {result['hr_bpm']:.1f} BPM")
-print(f"Ground Truth HR: {sample['hr_bpm']:.1f} BPM")
-print("FERTIG!")
+r1 = tm.estimate(cropped, rois_per_frame, fps)
+print(f"   HR: {r1['hr_bpm']:.1f} BPM (GT: {gt_hr:.1f}, "
+      f"Error: {abs(r1['hr_bpm'] - gt_hr):.1f})")
+print(f"   RR: {r1['rr_bpm']:.1f} BPM (GT: {gt_rr:.1f})")
+
+# ── Methode 2: ICA ──
+print("\n2. ICA:")
+ica = ICAMethod(
+    config["methods"]["ica"],
+    config["signal"],
+)
+r2 = ica.estimate(cropped, rois_per_frame, fps)
+print(f"   HR: {r2['hr_bpm']:.1f} BPM (GT: {gt_hr:.1f}, "
+      f"Error: {abs(r2['hr_bpm'] - gt_hr):.1f})")
+print(f"   RR: {r2['rr_bpm']:.1f} BPM (GT: {gt_rr:.1f})")
+
+# ── Methode 3: Garbey ──
+print("\n3. Garbey:")
+garbey = GarbeyMethod(
+    config["methods"]["garbey"],
+    config["signal"],
+)
+r3 = garbey.estimate(cropped, keypoints, fps)
+print(f"   HR: {r3['hr_bpm']:.1f} BPM (GT: {gt_hr:.1f}, "
+      f"Error: {abs(r3['hr_bpm'] - gt_hr):.1f})")
+print(f"   RR: {r3['rr_bpm']:.1f} BPM (GT: {gt_rr:.1f})")
+
+# ── Zusammenfassung ──
+print(f"\n{'═' * 50}")
+print(f"  ZUSAMMENFASSUNG")
+print(f"{'═' * 50}")
+print(f"  {'Methode':<15} {'HR est':>8} {'HR GT':>8} {'Error':>8} {'RR est':>8} {'RR GT':>8}")
+print(f"  {'─' * 58}")
+print(f"  {'Thermal Mean':<15} {r1['hr_bpm']:>7.1f} {gt_hr:>8.1f} {abs(r1['hr_bpm']-gt_hr):>7.1f} {r1['rr_bpm']:>8.1f} {gt_rr:>8.1f}")
+print(f"  {'ICA':<15} {r2['hr_bpm']:>7.1f} {gt_hr:>8.1f} {abs(r2['hr_bpm']-gt_hr):>7.1f} {r2['rr_bpm']:>8.1f} {gt_rr:>8.1f}")
+print(f"  {'Garbey':<15} {r3['hr_bpm']:>7.1f} {gt_hr:>8.1f} {abs(r3['hr_bpm']-gt_hr):>7.1f} {r3['rr_bpm']:>8.1f} {gt_rr:>8.1f}")
+print(f"\nFERTIG!")
