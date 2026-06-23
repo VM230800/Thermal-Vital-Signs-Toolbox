@@ -127,16 +127,22 @@ r3 = garbey.estimate(cropped, keypoints, fps)
 print(f"   HR: {r3['hr_bpm']:.1f} BPM")
 print(f"   RR: {r3['rr_bpm']:.1f} BPM")
 
+# ── Ground Truth ──
+gt_hr = sample["hr_bpm"]
+gt_rr = sample["rr_bpm"]
+print(f"\nGround Truth (aus Rohsignal berechnet):")
+print(f"  HR: {gt_hr:.1f} BPM")
+print(f"  RR: {gt_rr:.1f} BPM")
+print(f"{'─' * 50}")
+
+
 # ── Zusammenfassung ──
 print(f"\n{'═' * 50}")
 print(f"  ZUSAMMENFASSUNG – {recording_id}")
 print(f"{'═' * 50}")
-print(f"  {'Methode':<15} {'HR':>8} {'RR':>8}")
-print(f"  {'─' * 35}")
-print(f"  {'Thermal Mean':<15} {r1['hr_bpm']:>7.1f} {r1['rr_bpm']:>8.1f}")
-print(f"  {'ICA':<15} {r2['hr_bpm']:>7.1f} {r2['rr_bpm']:>8.1f}")
-print(f"  {'Garbey':<15} {r3['hr_bpm']:>7.1f} {r3['rr_bpm']:>8.1f}")
-print(f"\n  Hinweis: NPZ hat kein Ground Truth BPM.")
-print(f"  HR sollte ca. 60-100 BPM sein.")
-print(f"  RR sollte ca. 12-20 BPM sein.")
+print(f"  {'Methode':<15} {'HR est':>8} {'HR GT':>8} {'Error':>8} {'RR est':>8} {'RR GT':>8}")
+print(f"  {'─' * 58}")
+print(f"  {'Thermal Mean':<15} {r1['hr_bpm']:>7.1f} {gt_hr:>8.1f} {abs(r1['hr_bpm']-gt_hr):>7.1f} {r1['rr_bpm']:>8.1f} {gt_rr:>8.1f}")
+print(f"  {'ICA':<15} {r2['hr_bpm']:>7.1f} {gt_hr:>8.1f} {abs(r2['hr_bpm']-gt_hr):>7.1f} {r2['rr_bpm']:>8.1f} {gt_rr:>8.1f}")
+print(f"  {'Garbey':<15} {r3['hr_bpm']:>7.1f} {gt_hr:>8.1f} {abs(r3['hr_bpm']-gt_hr):>7.1f} {r3['rr_bpm']:>8.1f} {gt_rr:>8.1f}")
 print(f"\nFERTIG!")
