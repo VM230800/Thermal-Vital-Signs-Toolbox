@@ -18,50 +18,13 @@ synchronized_data_24.npz	synchronized_data_8.npz
 synchronized_data_25.npz	synchronized_data_9.npz
 
 
-## Package Plan ##
-
-  environment location: /Volumes/500GB HDD/toolbox_env
-
-  added / updated specs:
-    - python=3.12
-
-
-The following NEW packages will be INSTALLED:
-
-  bzip2              conda-forge/osx-64::bzip2-1.0.8-h500dc9f_9 
-  ca-certificates    conda-forge/noarch::ca-certificates-2026.6.17-hbd8a1cb_0 
-  icu                conda-forge/osx-64::icu-78.3-h25d91c4_0 
-  libexpat           conda-forge/osx-64::libexpat-2.8.1-hcc62823_1 
-  libffi             conda-forge/osx-64::libffi-3.5.2-hd1f9c09_0 
-  liblzma            conda-forge/osx-64::liblzma-5.8.3-hbb4bfdb_0 
-  libsqlite          conda-forge/osx-64::libsqlite-3.53.2-h8f8c405_0 
-  libzlib            conda-forge/osx-64::libzlib-1.3.2-hbb4bfdb_2 
-  ncurses            conda-forge/osx-64::ncurses-6.6-hcc0dc9a_0 
-  openssl            conda-forge/osx-64::openssl-3.6.3-hc881268_0 
-  packaging          conda-forge/noarch::packaging-26.2-pyhc364b38_0 
-  pip                conda-forge/noarch::pip-26.1.2-pyh8b19718_0 
-  python             conda-forge/osx-64::python-3.12.13-ha9537fe_0_cpython 
-  readline           conda-forge/osx-64::readline-8.3-h68b038d_0 
-  setuptools         conda-forge/noarch::setuptools-82.0.1-pyh332efcf_0 
-  tk                 conda-forge/osx-64::tk-8.6.13-h7142dee_3 
-  tzdata             conda-forge/noarch::tzdata-2025c-hc9c84f9_1 
-  wheel              conda-forge/noarch::wheel-0.47.0-pyhd8ed1ab_0 
-
-
-
-Downloading and Extracting Packages:
-
-Preparing transaction: done
-Verifying transaction: done
-Executing transaction: done
-Rolling back transaction: done
-
-CorruptedEnvironmentError: The target environment has been corrupted. Corrupted environments most commonly
-occur when the conda process is force-terminated while in an unlink-link
-transaction.
-  environment location: /Volumes/500GB HDD/toolbox_env
-  corrupted file: /Volumes/500GB HDD/toolbox_env/conda-meta/._bzip2-1.0.8-h500dc9f_9.json
-
-()
-
-(base) MacBook-Air-4:~ valeriamoltschanov$ 
+(toolbox) MacBook-Air-4:test_toolbox valeriamoltschanov$ python test_quick.py
+BP4DDataset: 1 subjects, 1 samples
+Frames: (100, 480, 726, 3), float32
+RAM: ~418 MB
+[W NNPACK.cpp:64] Could not initialize NNPACK! Reason: Unsupported hardware.
+YOLO: 100/100 frames with keypoints
+HR: 75.0 BPM
+Ground Truth HR: 95.9 BPM
+FERTIG!
+(toolbox) MacBook-Air-4:test_toolbox valeriamoltschanov$
