@@ -151,6 +151,53 @@ class NPZDataset:
 
         return 1.0 / median_diff
 
+
+@staticmethod
+    def _compute_bpm_from_peaks(signal, fps, freq_range=(0.7, 3.5)):
+        """
+        Compute BPM from a raw physiological signal using FFT.
+
+        Args:
+            signal:     np.ndarray (N,), raw pulse or resp signal
+            fps:        float, sampling rate
+            freq_range: tuple (low, high) in Hz
+
+        Returns:
+            float: estimated BPM, or NaN if computation fails
+        """
+        try:
+            if len(signal) < 10:
+                return float("nan")
+
+            # Remove DC offset
+            signal = signal - np.mean(signal)
+
+            # Bandpass via FFT
+            n = len(signal)
+            window = np.hanning(n)
+            fft_vals = np.abs(np.fft.rfft(signal * window))
+            freqs = np.fft.rfftfreq(n, d=1.0 / fps)
+
+            # Only look in the valid frequency range
+            mask = (freqs >= freq_range[0]) & (freqs <= freq_range[1])
+
+            if not mask.any():
+                return float("nan")
+
+            fft_masked = fft_vals.copy()
+            fft_masked[~mask] = 0
+
+            # Find dominant frequency
+            peak_idx = np.argmax(fft_masked)
+            peak_freq = freqs[peak_idx]
+
+            # Convert to BPM
+            bpm = peak_freq * 60.0
+
+            return float(bpm)
+
+        except Exception:
+            return float("nan")
     @staticmethod
     def _sort_key(path):
         """
