@@ -109,6 +109,7 @@ class BP4DDataset:
             "fps":          fps,
             "subject":      subj,
             "task":         task,
+            "recording_id": f"{subj}_{task}",
             "hr_bpm":       hr_bpm,
             "rr_bpm":       rr_bpm,
             "pulse_rate":   pulse_rate,
