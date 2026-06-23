@@ -31,27 +31,48 @@ if len(dataset) == 0:
 
 sample = dataset[0]
 
-# ── NUR 50 Frames (NPZ ist groß: 768x1024) ──
-frames = sample["frames"][:50]
+# ── NUR 50 Frames ──
+frames_raw = sample["frames"][:50]
 fps = sample["fps"]
+
+# ── FPS Fix: Falls 0 oder unrealistisch ──
+if fps < 1:
+    print(f"  FPS aus Timestamps ungültig ({fps:.3f}), nutze Fallback: 30")
+    fps = 30.0
+
 recording_id = sample.get("recording_id", "005_rec_0")
 
 print(f"Recording: {recording_id}")
-print(f"Frames: {frames.shape}, {frames.dtype}")
-print(f"RAM: ~{frames.nbytes / 1e6:.0f} MB")
-print(f"Dauer: {len(frames)/fps:.1f}s bei {fps:.1f} FPS")
+print(f"Frames: {frames_raw.shape}, {frames_raw.dtype}")
+print(f"Temperatur-Range: {frames_raw.min():.1f}°C – {frames_raw.max():.1f}°C")
+print(f"RAM: ~{frames_raw.nbytes / 1e6:.0f} MB")
+print(f"Dauer: {len(frames_raw)/fps:.1f}s bei {fps:.1f} FPS")
 
-# ── NPZ Frames sind (N, H, W) → YOLO braucht (N, H, W, 3) ──
-if frames.ndim == 3:
-    print("Konvertiere Grayscale → 3-Kanal...")
-    frames = np.stack([frames, frames, frames], axis=-1)
+# ══════════════════════════════════════════════════════
+# WICHTIG: Thermal → Bild konvertieren für YOLO
+# NPZ Frames sind Temperaturwerte (z.B. 25.0-37.0°C)
+# YOLO braucht Pixelwerte (0-255)
+# ══════════════════════════════════════════════════════
+print("\nKonvertiere Thermal → Bildformat für YOLO...")
 
-print(f"Frames nach Konvertierung: {frames.shape}")
+# Normalisieren: min-max auf 0-255
+vmin = np.percentile(frames_raw, 1)   # Robust gegen Ausreißer
+vmax = np.percentile(frames_raw, 99)
+frames_norm = (frames_raw - vmin) / (vmax - vmin)
+frames_norm = np.clip(frames_norm, 0, 1)
+frames_uint8 = (frames_norm * 255).astype(np.uint8)
+
+# Grayscale → 3-Kanal (YOLO braucht RGB)
+frames_yolo = np.stack([frames_uint8, frames_uint8, frames_uint8],
+                       axis=-1).astype(np.float32)
+
+print(f"Frames für YOLO: {frames_yolo.shape}, "
+      f"Range: {frames_yolo.min():.0f}-{frames_yolo.max():.0f}")
 
 # ── YOLO ──
 det = config["detection"]
 cropped, keypoints = process_with_yolo(
-    frames,
+    frames_yolo,
     model_path=det["model_path"],
     target_size=tuple(det["target_size"]),
     padding=det.get("padding", 50),
@@ -70,7 +91,11 @@ n_ok = sum(1 for r in rois_per_frame if r is not None)
 print(f"YOLO: {n_ok}/{len(keypoints)} frames with keypoints")
 
 if n_ok == 0:
-    print("FEHLER: YOLO hat kein Gesicht erkannt!")
+    print("\nFEHLER: YOLO hat kein Gesicht erkannt!")
+    print("Mögliche Ursachen:")
+    print("  - Thermalbilder zu unscharf")
+    print("  - Person nicht im Bild")
+    print("  - Anderes Recording versuchen")
     exit()
 
 # ── Methode 1: Thermal Mean ──
