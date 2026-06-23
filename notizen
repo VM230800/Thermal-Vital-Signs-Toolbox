@@ -76,38 +76,19 @@ ModuleNotFoundError: No module named 'methods.thermal_mean'
 
 
 (base) MacBook-Air-4:test_toolbox valeriamoltschanov$ python test_quick.py
-BP4DDataset: 1 subjects, 1 samples
-Frames: (200, 480, 726, 3), float32
-RAM: ~836 MB
-Intel MKL WARNING: Support of Intel(R) Streaming SIMD Extensions 4.2 (Intel(R) SSE4.2) enabled only processors has been deprecated. Intel oneAPI Math Kernel Library 2025.0 will require Intel(R) Advanced Vector Extensions (Intel(R) AVX) instructions.
+AttributeError: module 'numpy._globals' has no attribute '_signature_descriptor'
 Traceback (most recent call last):
-  File "/Users/valeriamoltschanov/Desktop/test_toolbox/test_quick.py", line 33, in <module>
-    cropped, keypoints = process_with_yolo(
-                         ^^^^^^^^^^^^^^^^^^
-  File "/Users/valeriamoltschanov/Desktop/test_toolbox/utils/yolo_processing.py", line 161, in process_with_yolo
-    x1, y1, x2, y2 = _detect_face_box(model, frames[0], padding=padding)
-                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/Users/valeriamoltschanov/Desktop/test_toolbox/utils/yolo_processing.py", line 70, in _detect_face_box
-    results = model(frame, verbose=False, conf=confidence)
-              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/usr/local/Caskroom/miniforge/base/lib/python3.12/site-packages/ultralytics/engine/model.py", line 187, in __call__
-    return self.predict(source, stream, **kwargs)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/usr/local/Caskroom/miniforge/base/lib/python3.12/site-packages/ultralytics/engine/model.py", line 557, in predict
-    return self.predictor.predict_cli(source=source) if is_cli else self.predictor(source=source, stream=stream)
-                                                                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/usr/local/Caskroom/miniforge/base/lib/python3.12/site-packages/ultralytics/engine/predictor.py", line 229, in __call__
-    return list(self.stream_inference(source, model, *args, **kwargs))  # merge list of Result into one
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/usr/local/Caskroom/miniforge/base/lib/python3.12/site-packages/torch/utils/_contextlib.py", line 35, in generator_context
-    response = gen.send(None)
-               ^^^^^^^^^^^^^^
-  File "/usr/local/Caskroom/miniforge/base/lib/python3.12/site-packages/ultralytics/engine/predictor.py", line 332, in stream_inference
-    im = self.preprocess(im0s)
-         ^^^^^^^^^^^^^^^^^^^^^
-  File "/usr/local/Caskroom/miniforge/base/lib/python3.12/site-packages/ultralytics/engine/predictor.py", line 169, in preprocess
-    im = torch.from_numpy(im)
-         ^^^^^^^^^^^^^^^^^^^^
-TypeError: expected np.ndarray (got numpy.ndarray)
+  File "/Users/valeriamoltschanov/Desktop/test_toolbox/test_quick.py", line 4, in <module>
+    from data.bp4d_loader import BP4DDataset
+  File "/Users/valeriamoltschanov/Desktop/test_toolbox/data/bp4d_loader.py", line 11, in <module>
+    import cv2
+  File "/usr/local/Caskroom/miniforge/base/lib/python3.12/site-packages/cv2/__init__.py", line 181, in <module>
+    bootstrap()
+  File "/usr/local/Caskroom/miniforge/base/lib/python3.12/site-packages/cv2/__init__.py", line 153, in bootstrap
+    native_module = importlib.import_module("cv2")
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/Caskroom/miniforge/base/lib/python3.12/importlib/__init__.py", line 90, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ImportError: numpy._core.multiarray failed to import
 (base) MacBook-Air-4:test_toolbox valeriamoltschanov$ 
-
