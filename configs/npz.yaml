@@ -34,4 +34,4 @@ recordings: null      # e.g. [0, 1, 5] or null
 fps: 30 # Fallback-FPS [frames per second]
 
 # Preprocessing (Thermal camera requires a warm-up period)
-warmup_seconds: 10
+warmup_seconds: 30
