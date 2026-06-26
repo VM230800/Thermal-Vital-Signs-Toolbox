@@ -264,9 +264,9 @@ def save_visualisations(config, sample, cropped, keypoints,
     """
     Save diagnostic plots for one recording.
 
-    - ROI overlay image (always when save_plots=true)
-    - Signal plots per method (always when save_plots=true)
-    - Video clip (only when save_video=true)
+    - ROI overlay image
+    - Signal comparison plots (predicted vs ground truth)
+    - Optional video clip
     """
     output = config.get("output", {})
     save_dir = output.get("save_dir", "results/")
@@ -287,17 +287,22 @@ def save_visualisations(config, sample, cropped, keypoints,
                        recording_id, save_dir,
                        max_seconds=max_sec)
 
-    # ── 3. Signal Plots per method ──
+    # ── 3. Signal Comparison Plots (predicted vs GT) ──
+    gt_pulse = sample.get("pulse_rate", None)
+    gt_resp = sample.get("resp_rate", None)
+
     for method_name, result in sample_results.items():
         if np.isnan(result.get("hr_bpm", float("nan"))):
             continue
 
+        # Get ROI names for this method
         method_cfg = config["methods"].get(method_name, {})
         roi_names = method_cfg.get("rois", [])
 
         if not roi_names:
             continue
 
+        # Extract predicted signal from ROIs
         roi_signals = extract_all_roi_signals(
             cropped, rois, roi_names)
 
@@ -306,26 +311,40 @@ def save_visualisations(config, sample, cropped, keypoints,
             if np.isnan(clean).all():
                 continue
 
-            # HR signal plot
-            bp = config["signal"]["hr_bandpass"]
-            try:
-                filtered = bandpass_filter(
-                    clean, fps,
-                    low=bp["low"], high=bp["high"],
-                    order=bp["order"],
-                )
-                save_signal_plot(
-                    raw_signal, filtered, fps,
-                    result["hr_bpm"],
-                    sample.get("hr_bpm", float("nan")),
-                    "hr", method_name,
-                    recording_id, save_dir,
-                )
-            except ValueError:
-                pass
+            # ── HR: Predicted vs Ground Truth ──
+            if gt_pulse is not None and len(gt_pulse) > 10:
+                bp = config["signal"]["hr_bandpass"]
+                try:
+                    filtered = bandpass_filter(
+                        clean, fps,
+                        low=bp["low"], high=bp["high"],
+                        order=bp["order"],
+                    )
+                    gt_filtered = bandpass_filter(
+                        gt_pulse[:len(filtered)], fps,
+                        low=bp["low"], high=bp["high"],
+                        order=bp["order"],
+                    )
+                    save_signal_comparison(
+                        predicted_signal=filtered,
+                        gt_signal=gt_filtered,
+                        fps=fps,
+                        predicted_bpm=result["hr_bpm"],
+                        gt_bpm=sample.get("hr_bpm", float("nan")),
+                        signal_type="hr",
+                        method_name=method_name,
+                        recording_id=recording_id,
+                        save_dir=save_dir,
+                        bandpass=(bp["low"], bp["high"]),
+                    )
+                except Exception as e:
+                    warnings.warn(
+                        f"    HR comparison plot failed: {e}")
 
-            # RR signal plot
-            if not np.isnan(result.get("rr_bpm", float("nan"))):
+            # ── RR: Predicted vs Ground Truth ──
+            if (gt_resp is not None and len(gt_resp) > 10
+                    and not np.isnan(
+                        result.get("rr_bpm", float("nan")))):
                 bp_rr = config["signal"]["rr_bandpass"]
                 try:
                     filtered_rr = bandpass_filter(
@@ -333,15 +352,26 @@ def save_visualisations(config, sample, cropped, keypoints,
                         low=bp_rr["low"], high=bp_rr["high"],
                         order=bp_rr["order"],
                     )
-                    save_signal_plot(
-                        raw_signal, filtered_rr, fps,
-                        result["rr_bpm"],
-                        sample.get("rr_bpm", float("nan")),
-                        "rr", method_name,
-                        recording_id, save_dir,
+                    gt_filtered_rr = bandpass_filter(
+                        gt_resp[:len(filtered_rr)], fps,
+                        low=bp_rr["low"], high=bp_rr["high"],
+                        order=bp_rr["order"],
                     )
-                except ValueError:
-                    pass
+                    save_signal_comparison(
+                        predicted_signal=filtered_rr,
+                        gt_signal=gt_filtered_rr,
+                        fps=fps,
+                        predicted_bpm=result["rr_bpm"],
+                        gt_bpm=sample.get("rr_bpm", float("nan")),
+                        signal_type="rr",
+                        method_name=method_name,
+                        recording_id=recording_id,
+                        save_dir=save_dir,
+                        bandpass=(bp_rr["low"], bp_rr["high"]),
+                    )
+                except Exception as e:
+                    warnings.warn(
+                        f"    RR comparison plot failed: {e}")
 
             break  # Only first valid ROI
 
