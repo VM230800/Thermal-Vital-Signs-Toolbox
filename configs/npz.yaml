@@ -24,30 +24,14 @@
 # Path to .npz directory
 root_dir: "/Volumes/home/IRData"
 
-# Subject and task filters
+# Subject and recording filters
 # null = load all available
 # List = load only specified entries
-subject_id: null        # e.g. ["005", "006"] or null
-recording_id: null      # e.g. [0, 1, 5] or null
+subjects: null        # e.g. ["005", "006"] or null
+recordings: null      # e.g. [0, 1, 5] or null
 
 # Video parameters
-# FPS is calculated from the timestamps in array2; this value is only used as a fallback if the calculation fails
-fps: 30
+fps: 30 # Fallback-FPS [frames per second]
 
-# Thermal frame resolution (for documentation only)
-frame_width: 1024       # [Pixel]
-frame_height: 768       # [Pixel]
-
-# ── Physiology ──
-# Raw signals – no precomputed BPM values available.
-# The pipeline must apply peak detection to pulse_signal and resp_signal.
-signal_type: "raw"      # "raw" = raw signal, "bpm" = precomputed BPM values (as in BP4D+)
-
-# Sampling rate of the physiological signals.
-# Since the signals are frame-synchronized within the .npz file,
-# the physiological sampling rate corresponds to the video FPS.
-physio_fs: null         # assigned from FPS at runtime
-
-# ── Preprocessing ──
-# Thermal camera may require a warm-up period until temperature values stabilize.
+# Preprocessing (Thermal camera requires a warm-up period)
 warmup_seconds: 10

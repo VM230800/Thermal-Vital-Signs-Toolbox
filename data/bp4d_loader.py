@@ -1,9 +1,6 @@
 """
-data/bp4d_loader.py
-===================
 Dataloader for the BP4D+ dataset.
-Handles thermal video frames and physiological ground truth data
-(heart rate, respiration rate).
+Loads thermal video frames and physiological ground truth data (heart rate, respiration rate).
 """
 
 import os
@@ -11,11 +8,11 @@ import glob
 import cv2
 import numpy as np
 
+from data.base_loader import BaseLoader
 
-class BP4DDataset:
+class BP4DDataset(BaseLoader):
 
-    def __init__(self, root_dir, subjects=None, tasks=None,
-                 warmup_seconds=0, fps=25.0):
+    def __init__(self, root_dir, subjects=None, tasks=None, warmup_seconds=0, fps=25.0):
         """
         Initialize the BP4D+ dataset loader.
 

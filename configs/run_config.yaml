@@ -1,26 +1,22 @@
 # ─────────────────────────────────────────────────────────────────
-# run_config.yaml – Main pipeline configuration
+# Main pipeline configurations
 # ─────────────────────────────────────────────────────────────────
 
-# ── Dataset ──
+# Used dataset
 dataset: "bp4d"                         # "bp4d" or "npz"
 dataset_config: "configs/bp4d.yaml"
 
-# ── Face detection (YOLO) ──
+# Used face detection (YOLO)
 detection:
   model_path: "models/YOLOv11_TFL_252.pt"
-  num_keypoints: 54
   target_size: [400, 400]
   padding: 50
-  confidence: 0.5
-  device: "cpu"
 
-# ── Methods ──
+# Used methods
 methods:
-
   thermal_mean:
     enabled: true
-    target: "hr"
+    target: "both"
     rois:
       - "forehead"
       - "left_cheek"
@@ -50,7 +46,7 @@ methods:
         p1: 48
         p2: 53
 
-# ── Signal processing ──
+# Signal processing
 signal:
   hr_bandpass:
     low: 0.7                            # [Hz] → ~42 BPM
@@ -65,14 +61,14 @@ signal:
   fft_window: 512
   peak_method: "fft"
 
-# ── Evaluation ──
+# Evaluation
 evaluation:
   metrics:
     - "MAE"
     - "RMSE"
     - "pearson"
 
-# ── Output ──
+# Output
 output:
   save_dir: "results/"
   save_plots: true

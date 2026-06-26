@@ -1,6 +1,4 @@
 """
-main.py
-=======
 Main pipeline for the Thermal Vital Signs Toolbox.
 
 Orchestrates the complete workflow:
@@ -12,10 +10,6 @@ Orchestrates the complete workflow:
     6. Visualisation (ROI overlay, signal plots, optional video)
     7. Evaluate against ground truth
     8. Save results (CSV, plots, PDF table)
-
-Usage:
-    python main.py
-    python main.py --config configs/run_config.yaml
 """
 
 import argparse
@@ -44,21 +38,21 @@ from methods.garbey import GarbeyMethod
 from evaluation.metrics import evaluate_algorithm
 from evaluation.results_table import ResultsTable
 
-# ── Visualisation ──                                              # ← NEU
-from utils.visualization import (                                  # ← NEU
-    save_roi_overlay,                                              # ← NEU
-    save_signal_plot,                                              # ← NEU
-    save_roi_video,                                                # ← NEU
-)                                                                  # ← NEU
-from preprocessing.signal_extraction import (                      # ← NEU
-    extract_all_roi_signals,                                       # ← NEU
-    interpolate_nan,                                               # ← NEU
-)                                                                  # ← NEU
-from preprocessing.peak_extraction import bandpass_filter          # ← NEU
+# ── Visualisation ──
+from utils.visualization import (
+    save_roi_overlay,
+    save_signal_plot,
+    save_roi_video,
+)
+from preprocessing.signal_extraction import (
+    extract_all_roi_signals,
+    interpolate_nan,
+)
+from preprocessing.peak_extraction import bandpass_filter
 
 
 # ─────────────────────────────────────────────────────────────────
-# 1. Configuration
+# 1. Load configuration
 # ─────────────────────────────────────────────────────────────────
 
 def load_config(config_path):
@@ -73,7 +67,7 @@ def load_config(config_path):
 
 
 # ─────────────────────────────────────────────────────────────────
-# 2. Dataset loading
+# 2. Load dataset
 # ─────────────────────────────────────────────────────────────────
 
 def load_dataset(config, dataset_config):
@@ -91,7 +85,10 @@ def load_dataset(config, dataset_config):
     elif dataset_type == "npz":
         dataset = NPZDataset(
             root_dir=dataset_config["root_dir"],
+            subjects=dataset_config.get("subjects"),
+            recordings=dataset_config.get("recordings"),
             warmup_seconds=dataset_config.get("warmup_seconds", 10),
+            fps=dataset_config.get("fps", 30),
         )
     else:
         raise ValueError(f"Unknown dataset: '{dataset_type}'")
