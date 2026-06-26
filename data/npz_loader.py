@@ -86,6 +86,8 @@ class NPZDataset:
     def __getitem__(self, idx):
         """
         Load and return a single recording by index.
+        Loads ALL frames into RAM – use iter_frames() for
+        memory-friendly processing.
         """
         subj, rec_id, npz_path = self.samples[idx]
 
@@ -127,6 +129,84 @@ class NPZDataset:
             "signal_type":  "raw",
         }
 
+    # ─────────────────────────────────────────────────────
+    # Streaming methods (RAM-friendly)
+    # ─────────────────────────────────────────────────────
+
+    def iter_frames(self, idx, max_frames=None):
+        """
+        Yield frames one-by-one. Only ONE frame in RAM at a time.
+
+        Args:
+            idx:        Sample index
+            max_frames: Max number of frames to yield (None = all)
+
+        Yields:
+            np.ndarray (H, W), float32 (temperature in °C)
+        """
+        subj, rec_id, npz_path = self.samples[idx]
+
+        data = np.load(npz_path, allow_pickle=True)
+        all_frames = data["array1"]
+
+        fps = self._compute_fps(data["array2"])
+        warmup_frames = int(self.warmup_seconds * fps)
+
+        total = len(all_frames)
+        start = min(warmup_frames, total)
+
+        count = 0
+        for i in range(start, total):
+            if max_frames is not None and count >= max_frames:
+                break
+
+            yield all_frames[i].astype(np.float32)
+            count += 1
+
+    def get_metadata(self, idx):
+        """
+        Get sample metadata WITHOUT loading frames into RAM.
+
+        Returns:
+            dict with fps, subject, task, recording_id,
+                 hr_bpm, rr_bpm, total_frames (no frames!)
+        """
+        subj, rec_id, npz_path = self.samples[idx]
+
+        data = np.load(npz_path, allow_pickle=True)
+        fps = self._compute_fps(data["array2"])
+
+        # Warmup
+        warmup_frames = int(self.warmup_seconds * fps)
+        total = len(data["array1"])
+        start = min(warmup_frames, total)
+
+        # Ground truth from raw signals
+        pulse_signal = data["array4"][start:].astype(np.float64)
+        resp_signal = data["array5"][start:].astype(np.float64)
+
+        hr_bpm = self._compute_bpm_from_peaks(
+            pulse_signal, fps, freq_range=(0.7, 3.5))
+        rr_bpm = self._compute_bpm_from_peaks(
+            resp_signal, fps, freq_range=(0.1, 0.7))
+
+        return {
+            "fps":          fps,
+            "subject":      subj,
+            "task":         f"rec_{rec_id}",
+            "recording_id": f"{subj}_rec_{rec_id}",
+            "hr_bpm":       hr_bpm,
+            "rr_bpm":       rr_bpm,
+            "total_frames": total - start,
+            "pulse_rate":   pulse_signal,
+            "resp_rate":    resp_signal,
+            "signal_type":  "raw",
+        }
+
+    # ─────────────────────────────────────────────────────
+    # Internal helper methods
+    # ─────────────────────────────────────────────────────
+
     def _compute_fps(self, timestamps):
         """
         Compute FPS from timestamp array.
@@ -147,7 +227,6 @@ class NPZDataset:
         else:
             return 1.0 / median_diff
 
-    
     @staticmethod
     def _compute_bpm_from_peaks(signal, fps, freq_range=(0.7, 3.5)):
         """
