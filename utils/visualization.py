@@ -153,7 +153,175 @@ def save_signal_plot(raw_signal, filtered_signal, fps,
 
 
 # ══════════════════════════════════════════════════════════
-# 3. Video Clip – optional (~2-5 MB)
+# 3. Signal Comparison Plot – Predicted vs Ground Truth
+# ══════════════════════════════════════════════════════════
+
+def save_signal_comparison(predicted_signal, gt_signal, fps,
+                           predicted_bpm, gt_bpm,
+                           signal_type, method_name,
+                           recording_id, save_dir,
+                           bandpass=(0.7, 3.5)):
+    """
+    Plot predicted signal vs ground truth signal.
+
+    Shows two subplots:
+        1. Time domain: both signals normalised and overlaid
+        2. Frequency domain: FFT of both with peaks marked
+
+    Args:
+        predicted_signal: np.ndarray (N,), our extracted signal
+        gt_signal:        np.ndarray (M,), ground truth signal
+        fps:              float, sampling rate
+        predicted_bpm:    float, our estimated BPM
+        gt_bpm:           float, ground truth BPM
+        signal_type:      str, "hr" or "rr"
+        method_name:      str, e.g. "thermal_mean"
+        recording_id:     str, e.g. "006_rec_0"
+        save_dir:         str, output folder
+        bandpass:         tuple (low_hz, high_hz) for shading
+    """
+    fig, axes = plt.subplots(2, 1, figsize=(14, 8))
+
+    type_label = "Heart Rate" if signal_type == "hr" \
+        else "Respiration"
+    error = abs(predicted_bpm - gt_bpm)
+
+    fig.suptitle(
+        f"{type_label} Signal Comparison – {method_name}\n"
+        f"{recording_id}    |    "
+        f"Predicted: {predicted_bpm:.1f} BPM    |    "
+        f"GT: {gt_bpm:.1f} BPM    |    "
+        f"Error: {error:.1f} BPM",
+        fontsize=13, fontweight="bold",
+    )
+
+    # ── Normalise both signals to [-1, 1] ──
+    def normalise(sig):
+        sig = sig - np.nanmean(sig)
+        mx = np.nanmax(np.abs(sig))
+        if mx > 0:
+            sig = sig / mx
+        return sig
+
+    pred_clean = np.nan_to_num(predicted_signal.copy(), nan=0.0)
+    gt_clean = np.nan_to_num(gt_signal.copy(), nan=0.0)
+
+    pred_norm = normalise(pred_clean)
+    gt_norm = normalise(gt_clean)
+
+    # Match lengths (use shorter)
+    n = min(len(pred_norm), len(gt_norm))
+    pred_norm = pred_norm[:n]
+    gt_norm = gt_norm[:n]
+    time_axis = np.arange(n) / fps
+
+    # ────────────────────────────────────
+    # Subplot 1: Time Domain
+    # ────────────────────────────────────
+    ax1 = axes[0]
+    ax1.plot(time_axis, gt_norm, color="red", alpha=0.7,
+             linewidth=1.0,
+             label=f"Ground Truth ({gt_bpm:.1f} BPM)")
+    ax1.plot(time_axis, pred_norm, color="blue", alpha=0.7,
+             linewidth=1.0,
+             label=f"Predicted ({predicted_bpm:.1f} BPM)")
+
+    ax1.set_xlabel("Time [s]")
+    ax1.set_ylabel("Normalised Amplitude")
+    ax1.set_title("Time Domain (normalised)")
+    ax1.legend(loc="upper right")
+    ax1.grid(True, alpha=0.3)
+
+    # Error badge
+    ax1.text(
+        0.02, 0.95,
+        f"Error: {error:.1f} BPM",
+        transform=ax1.transAxes,
+        fontsize=12, fontweight="bold",
+        color=("green" if error < 5
+               else "orange" if error < 10
+               else "red"),
+        verticalalignment="top",
+        bbox=dict(boxstyle="round",
+                  facecolor="white", alpha=0.8),
+    )
+
+    # ────────────────────────────────────
+    # Subplot 2: Frequency Domain (FFT)
+    # ────────────────────────────────────
+    ax2 = axes[1]
+
+    window = np.hanning(n)
+    fft_pred = np.abs(np.fft.rfft(pred_norm * window))
+    fft_gt = np.abs(np.fft.rfft(gt_norm * window))
+    freqs = np.fft.rfftfreq(n, d=1.0 / fps)
+
+    # Convert to BPM axis
+    bpm_axis = freqs * 60.0
+
+    # Show relevant range only
+    if signal_type == "hr":
+        bpm_range = (40, 180)
+    else:
+        bpm_range = (5, 35)
+
+    mask = (bpm_axis >= bpm_range[0]) & (bpm_axis <= bpm_range[1])
+
+    if mask.any():
+        bpm_plot = bpm_axis[mask]
+        fft_pred_plot = fft_pred[mask]
+        fft_gt_plot = fft_gt[mask]
+
+        # Normalise FFT magnitudes for comparison
+        mx_pred = fft_pred_plot.max()
+        mx_gt = fft_gt_plot.max()
+        if mx_pred > 0:
+            fft_pred_plot = fft_pred_plot / mx_pred
+        if mx_gt > 0:
+            fft_gt_plot = fft_gt_plot / mx_gt
+
+        ax2.plot(bpm_plot, fft_gt_plot, color="red",
+                 alpha=0.7, linewidth=1.5,
+                 label=f"GT Peak: {gt_bpm:.1f} BPM")
+        ax2.plot(bpm_plot, fft_pred_plot, color="blue",
+                 alpha=0.7, linewidth=1.5,
+                 label=f"Predicted Peak: {predicted_bpm:.1f} BPM")
+
+        # Mark peaks with vertical lines
+        ax2.axvline(x=gt_bpm, color="red",
+                     linestyle="--", alpha=0.5, linewidth=1)
+        ax2.axvline(x=predicted_bpm, color="blue",
+                     linestyle="--", alpha=0.5, linewidth=1)
+
+        # Shade bandpass region
+        bp_bpm_low = bandpass[0] * 60
+        bp_bpm_high = bandpass[1] * 60
+        ax2.axvspan(bp_bpm_low, bp_bpm_high,
+                     alpha=0.1, color="green",
+                     label="Bandpass Range")
+
+    ax2.set_xlabel("Frequency [BPM]")
+    ax2.set_ylabel("Normalised Magnitude")
+    ax2.set_title("Frequency Domain (FFT)")
+    ax2.legend(loc="upper right")
+    ax2.grid(True, alpha=0.3)
+
+    # ── Save ──
+    plt.tight_layout()
+
+    rec_dir = os.path.join(save_dir, recording_id)
+    os.makedirs(rec_dir, exist_ok=True)
+
+    filename = f"{recording_id}_{method_name}_{signal_type}_comparison.png"
+    filepath = os.path.join(rec_dir, filename)
+    fig.savefig(filepath, dpi=150, bbox_inches="tight")
+    plt.close(fig)
+
+    print(f"    Saved: {filepath}")
+
+
+# ══════════════════════════════════════════════════════════
+# 4. Video Clip – optional (~2-5 MB)
 # ══════════════════════════════════════════════════════════
 
 def save_roi_video(frames, keypoints, fps, recording_id,
