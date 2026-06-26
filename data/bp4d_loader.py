@@ -156,6 +156,84 @@ class BP4DDataset(BaseLoader):
 
         return frames, fps
 
+
+    def iter_frames(self, idx, max_frames=None):
+        """
+        Yield frames one-by-one. Only ONE frame in RAM at a time.
+
+        Args:
+            idx:        Sample index
+            max_frames: Max number of frames to yield (None = all)
+
+        Yields:
+            np.ndarray (H, W, 3), float32
+        """
+        subj, task, wmv_path = self.samples[idx]
+
+        cap = cv2.VideoCapture(wmv_path)
+        if not cap.isOpened():
+            raise IOError(f"Cannot open video: {wmv_path}")
+
+        fps = cap.get(cv2.CAP_PROP_FPS)
+        if fps == 0:
+            fps = self.default_fps
+
+        # Skip warmup frames
+        warmup_frames = int(self.warmup_seconds * fps)
+        for _ in range(warmup_frames):
+            ret = cap.grab()
+            if not ret:
+                break
+
+        count = 0
+        while True:
+            if max_frames is not None and count >= max_frames:
+                break
+
+            ret, frame = cap.read()
+            if not ret:
+                break
+
+            yield frame.astype(np.float32)
+            count += 1
+
+        cap.release()
+
+    def get_metadata(self, idx):
+        """
+        Get sample metadata WITHOUT loading frames.
+        
+        Returns:
+            dict with fps, subject, task, recording_id,
+                 hr_bpm, rr_bpm (no frames!)
+        """
+        subj, task, wmv_path = self.samples[idx]
+
+        # FPS
+        cap = cv2.VideoCapture(wmv_path)
+        fps = cap.get(cv2.CAP_PROP_FPS)
+        total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+        cap.release()
+        if fps == 0:
+            fps = self.default_fps
+
+        # Ground truth
+        physio_dir = os.path.join(self.physio_dir, subj, task)
+        hr_bpm, rr_bpm, pulse_rate, resp_rate = self._load_physiology(
+            physio_dir)
+
+        return {
+            "fps":          fps,
+            "subject":      subj,
+            "task":         task,
+            "recording_id": f"{subj}_{task}",
+            "hr_bpm":       hr_bpm,
+            "rr_bpm":       rr_bpm,
+            "total_frames": total_frames,
+            "pulse_rate":   pulse_rate,
+            "resp_rate":    resp_rate,
+        }
+
     @staticmethod
     def _load_physiology(physio_dir):
         """
