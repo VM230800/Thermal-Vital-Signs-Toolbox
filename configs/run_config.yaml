@@ -6,6 +6,11 @@
 dataset: "bp4d"                         # "bp4d" or "npz"
 dataset_config: "configs/bp4d.yaml"
 
+# Processing mode
+processing:
+  streaming: true                       # true = RAM-friendly
+  max_frames: null                      # null = all, or e.g. 250
+
 # Used face detection (YOLO)
 detection:
   model_path: "models/YOLOv11_TFL_252.pt"
