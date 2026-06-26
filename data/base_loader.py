@@ -1,3 +1,4 @@
+"""
 data/base_loader.py
 ===================
 Abstract base class for all dataset loaders.
@@ -19,7 +20,7 @@ Child classes only implement DATASET-SPECIFIC logic:
     - _load_ground_truth()   → HR/RR ground truth
     - _get_subject()         → subject ID
     - _get_task()            → task/recording ID
-
+"""
 
 
 
