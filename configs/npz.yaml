@@ -1,8 +1,8 @@
 # ─────────────────────────────────────────────────────────────────
-# NPZ Thermal Dataset (Betreuer) – Konfiguration
+# NPZ Thermal Dataset – Configurations
 # ─────────────────────────────────────────────────────────────────
 #
-# Erwartete Verzeichnisstruktur:
+# Expected directory structure:
 #   IRData/
 #   ├── 005/
 #   │   ├── synchronized_data_0.npz
@@ -13,41 +13,41 @@
 #   └── 027/
 #       └── ...
 #
-# Inhalt jeder .npz-Datei:
-#   array1: (N, 768, 1024) float32  – Thermalframes in °C
-#   array2: (N,) float64            – Zeitstempel (zur FPS-Berechnung)
-#   array4: (N,) float64            – Puls-Rohsignal
-#   array5: (N,) float64            – Atem-Rohsignal
+# Contents of each .npz file:
+#   array1: (N, 768, 1024) float32  – Thermal frames in °C
+#   array2: (N,) float64            – Timestamps
+#   array4: (N,) float64            – Raw pulse signal
+#   array5: (N,) float64            – Raw respiration signal
 #
-# Hinweis: HR und RR liegen als Rohsignale vor und müssen
-#          per Peak-Detection in der Pipeline berechnet werden.
 # ─────────────────────────────────────────────────────────────────
 
+# Path to .npz directory
 root_dir: "/Volumes/home/IRData"
 
-# Subject- und Recording-Filter (null = alle verfügbaren laden)
-subject_id: null        # z.B. "005" oder ["005", "006"]
-recording_id: null      # z.B. 0 oder [0, 1, 5]
+# Subject and task filters
+# null = load all available
+# List = load only specified entries
+subject_id: null        # e.g. ["005", "006"] or null
+recording_id: null      # e.g. [0, 1, 5] or null
 
-# ── Videoparameter ──
-# FPS wird aus den Zeitstempeln (array2) berechnet.
-# Dieser Wert dient nur als Fallback, falls die Berechnung fehlschlägt.
+# Video parameters
+# FPS is calculated from the timestamps in array2; this value is only used as a fallback if the calculation fails
 fps: 30
 
-# Auflösung der Thermalframes (nur zur Dokumentation, wird aus Daten gelesen)
+# Thermal frame resolution (for documentation only)
 frame_width: 1024       # [Pixel]
 frame_height: 768       # [Pixel]
 
-# ── Physiologie ──
-# Rohsignale – keine fertigen BPM-Werte vorhanden.
-# Die Pipeline muss Peak-Detection auf pulse_signal und resp_signal anwenden.
-signal_type: "raw"      # "raw" = Rohsignal, "bpm" = fertige BPM-Werte (wie bei BP4D+)
+# ── Physiology ──
+# Raw signals – no precomputed BPM values available.
+# The pipeline must apply peak detection to pulse_signal and resp_signal.
+signal_type: "raw"      # "raw" = raw signal, "bpm" = precomputed BPM values (as in BP4D+)
 
-# Abtastrate der Physiologie-Signale.
-# Da die Signale frame-synchron in der .npz liegen,
-# entspricht die Physio-Abtastrate der Video-FPS.
-physio_fs: null         # wird zur Laufzeit aus FPS übernommen
+# Sampling rate of the physiological signals.
+# Since the signals are frame-synchronized within the .npz file,
+# the physiological sampling rate corresponds to the video FPS.
+physio_fs: null         # assigned from FPS at runtime
 
-# ── Vorverarbeitung ──
-# Thermalkamera braucht ggf. Anlaufzeit bis stabile Temperaturwerte vorliegen.
+# ── Preprocessing ──
+# Thermal camera may require a warm-up period until temperature values stabilize.
 warmup_seconds: 10
