@@ -63,3 +63,16 @@ BP4DDataset: 1 recordings found
 Samples: 1
 
 
+
+# ── Test get_metadata (neues Feature) ──
+print("\n── Test get_metadata() ──")
+meta = dataset.get_metadata(0)
+print(f"Recording: {meta['recording_id']}")
+print(f"FPS: {meta['fps']:.1f}")
+print(f"Frames: {meta['total_frames']}")
+print(f"HR GT: {meta['hr_bpm']:.1f} BPM")
+print(f"RR GT: {meta['rr_bpm']:.1f} BPM")
+
+
+
+
