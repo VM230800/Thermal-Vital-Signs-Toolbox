@@ -31,10 +31,15 @@ FERTIG!
 
 
 
-Thermal exists: True
-Physiology exists: True
-Subjects in Thermal: ['F038', 'F032', 'F045', 'M040', 'M037']...
-WMV files in F001: ['/Volumes/StudiShare/XDatabase/PPGI/BP4D+_v0.2/Thermal/F001/T7.wmv', '/Volumes/StudiShare/XDatabase/PPGI/BP4D+_v0.2/Thermal/F001/T9.wmv', '/Volumes/StudiShare/XDatabase/PPGI/BP4D+_v0.2/Thermal/F001/T8.wmv', '/Volumes/StudiShare/XDatabase/PPGI/BP4D+_v0.2/Thermal/F001/T6.wmv', '/Volumes/StudiShare/XDatabase/PPGI/BP4D+_v0.2/Thermal/F001/T1.wmv', '/Volumes/StudiShare/XDatabase/PPGI/BP4D+_v0.2/Thermal/F001/T2.wmv', '/Volumes/StudiShare/XDatabase/PPGI/BP4D+_v0.2/Thermal/F001/T5.wmv', '/Volumes/StudiShare/XDatabase/PPGI/BP4D+_v0.2/Thermal/F001/T10.wmv', '/Volumes/StudiShare/XDatabase/PPGI/BP4D+_v0.2/Thermal/F001/T4.wmv', '/Volumes/StudiShare/XDatabase/PPGI/BP4D+_v0.2/Thermal/F001/T3.wmv']
-Physio F001 exists: True
-Physio F001 contents: ['T4', 'T9', 'T3', 'T7', 'T2', 'T8', 'T5', 'T1', 'T10', 'T6']
-(toolbox) MacBook-Air-4:test_toolbox valeriamoltschanov$ 
+python -c "
+from data.bp4d_loader import BP4DDataset
+
+dataset = BP4DDataset(
+    root_dir='/Volumes/StudiShare/XDatabase/PPGI/BP4D+_v0.2',
+    subjects=['F001'],
+    tasks=['T1'],
+    fps=25,
+)
+print(f'Samples gefunden: {len(dataset)}')
+print(f'Samples: {dataset.samples}')
+"
