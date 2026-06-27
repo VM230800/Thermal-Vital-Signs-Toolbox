@@ -18,9 +18,11 @@ Resp_Volts erste 20 Werte:
 
 
 
-Exists: True
-Contents: ['F038', 'F032', 'F045', 'M040', 'M037']
-BP4DDataset: 1 recordings found
-Samples: 1
-Samples: [('F001', 'T1', '/Volumes/StudiShare/XDatabase/PPGI/BP4D+_v0.2/Thermal/F001/T1.wmv')]
-(toolbox) MacBook-Air-4:test_toolbox valeriamoltschanov$
+find . -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null
+
+python -c "
+import yaml
+with open('configs/bp4d.yaml') as f:
+    ds_config = yaml.safe_load(f)
+print('root_dir aus Config:', repr(ds_config['root_dir']))
+"
