@@ -49,6 +49,7 @@ from utils.visualization import (
     save_roi_overlay,
     save_signal_plot,
     save_signal_comparison,
+    save_gt_physiology_plot,
     save_roi_video,
 )
 from preprocessing.signal_extraction import (
@@ -86,7 +87,8 @@ def load_dataset(config, dataset_config):
             root_dir=dataset_config["root_dir"],
             subjects=dataset_config.get("subjects"),
             tasks=dataset_config.get("tasks"),
-            warmup_seconds=dataset_config.get("warmup_seconds", 0),
+            warmup_seconds=dataset_config.get(
+                "warmup_seconds", 0),
             fps=dataset_config.get("fps", 25),
         )
     elif dataset_type == "npz":
@@ -94,7 +96,8 @@ def load_dataset(config, dataset_config):
             root_dir=dataset_config["root_dir"],
             subjects=dataset_config.get("subjects"),
             recordings=dataset_config.get("recordings"),
-            warmup_seconds=dataset_config.get("warmup_seconds", 10),
+            warmup_seconds=dataset_config.get(
+                "warmup_seconds", 10),
             fps=dataset_config.get("fps", 30),
         )
     else:
@@ -112,11 +115,6 @@ def run_yolo_and_rois(frames, config):
     """
     Face detection → crop → keypoints → ROIs.
     All frames in RAM (use for small tests).
-
-    Returns:
-        cropped_frames: np.ndarray (N, H, W, 3) uint8
-        keypoints:      np.ndarray (N, 54, 2) float32
-        rois_per_frame: list of dict or None
     """
     det = config["detection"]
 
@@ -129,8 +127,10 @@ def run_yolo_and_rois(frames, config):
 
     rois_per_frame = _keypoints_to_rois(keypoints)
 
-    n_detected = sum(1 for r in rois_per_frame if r is not None)
-    print(f"  YOLO: {n_detected}/{len(keypoints)} frames with keypoints")
+    n_detected = sum(
+        1 for r in rois_per_frame if r is not None)
+    print(f"  YOLO: {n_detected}/{len(keypoints)} "
+          f"frames with keypoints")
 
     return cropped_frames, keypoints, rois_per_frame
 
@@ -139,22 +139,11 @@ def run_yolo_and_rois_streaming(dataset, idx, config,
                                 max_frames=None):
     """
     RAM-friendly: streams frames one-by-one through YOLO.
-    Only small cropped frames are kept in RAM.
-
-    Args:
-        dataset:    Dataset object with iter_frames() method
-        idx:        Sample index
-        config:     Main config dict
-        max_frames: Max frames to process (None = all)
-
-    Returns:
-        cropped_frames: np.ndarray (N, H, W, 3) uint8
-        keypoints:      np.ndarray (N, 54, 2) float32
-        rois_per_frame: list of dict or None
     """
     det = config["detection"]
 
-    frame_iter = dataset.iter_frames(idx, max_frames=max_frames)
+    frame_iter = dataset.iter_frames(
+        idx, max_frames=max_frames)
 
     cropped_frames, keypoints = process_with_yolo_streaming(
         frame_iterator=frame_iter,
@@ -165,23 +154,16 @@ def run_yolo_and_rois_streaming(dataset, idx, config,
 
     rois_per_frame = _keypoints_to_rois(keypoints)
 
-    n_detected = sum(1 for r in rois_per_frame if r is not None)
-    print(f"  YOLO: {n_detected}/{len(keypoints)} frames with keypoints")
+    n_detected = sum(
+        1 for r in rois_per_frame if r is not None)
+    print(f"  YOLO: {n_detected}/{len(keypoints)} "
+          f"frames with keypoints")
 
     return cropped_frames, keypoints, rois_per_frame
 
 
 def _keypoints_to_rois(keypoints):
-    """
-    Convert keypoint array to list of ROI dicts.
-    Shared by both YOLO modes.
-
-    Args:
-        keypoints: np.ndarray (N, 54, 2)
-
-    Returns:
-        list of dict or None for each frame
-    """
+    """Convert keypoint array to list of ROI dicts."""
     rois_per_frame = []
     for i in range(len(keypoints)):
         kp = keypoints[i]
@@ -202,20 +184,18 @@ def init_methods(config):
     signal_config = config["signal"]
     methods = {}
 
-    if methods_config.get("thermal_mean", {}).get("enabled", False):
+    if methods_config.get("thermal_mean", {}).get(
+            "enabled", False):
         methods["thermal_mean"] = ThermalMeanMethod(
-            methods_config["thermal_mean"], signal_config
-        )
+            methods_config["thermal_mean"], signal_config)
 
     if methods_config.get("ica", {}).get("enabled", False):
         methods["ica"] = ICAMethod(
-            methods_config["ica"], signal_config
-        )
+            methods_config["ica"], signal_config)
 
     if methods_config.get("garbey", {}).get("enabled", False):
         methods["garbey"] = GarbeyMethod(
-            methods_config["garbey"], signal_config
-        )
+            methods_config["garbey"], signal_config)
 
     print(f"Methods enabled: {list(methods.keys())}")
     return methods
@@ -223,12 +203,7 @@ def init_methods(config):
 
 def run_methods(methods, cropped_frames, keypoints,
                 rois_per_frame, fps):
-    """
-    Run all enabled methods on one sample.
-
-    Returns:
-        dict: method_name → result dict
-    """
+    """Run all enabled methods on one sample."""
     results = {}
 
     for name, method in methods.items():
@@ -264,9 +239,9 @@ def save_visualisations(config, sample, cropped, keypoints,
     """
     Save diagnostic plots for one recording.
 
-    - ROI overlay image
-    - Signal comparison plots (predicted vs ground truth)
-    - Optional video clip
+    Handles both BP4D+ (with raw waveforms) and NPZ datasets.
+    Uses raw BP/Resp waveforms when available for proper
+    oscillating ground truth comparison.
     """
     output = config.get("output", {})
     save_dir = output.get("save_dir", "results/")
@@ -287,22 +262,55 @@ def save_visualisations(config, sample, cropped, keypoints,
                        recording_id, save_dir,
                        max_seconds=max_sec)
 
-    # ── 3. Signal Comparison Plots (predicted vs GT) ──
+    # ── 3. Determine GT signal source ──
+    # BP4D+: use raw waveforms (BP_mmHg, Resp_Volts)
+    # NPZ:   use pulse_rate / resp_rate signals
+    bp_waveform = sample.get("bp_waveform", None)
+    resp_waveform = sample.get("resp_waveform", None)
+    physio_fps = sample.get("physio_fps", None)
+
     gt_pulse = sample.get("pulse_rate", None)
     gt_resp = sample.get("resp_rate", None)
 
+    # Choose best HR ground truth signal
+    if bp_waveform is not None:
+        hr_gt_signal = bp_waveform
+        hr_gt_fps = physio_fps
+        hr_gt_source = "waveform"
+    elif gt_pulse is not None:
+        hr_gt_signal = gt_pulse
+        hr_gt_fps = fps  # same as video if no physio_fps
+        hr_gt_source = "rate"
+    else:
+        hr_gt_signal = None
+        hr_gt_fps = None
+        hr_gt_source = None
+
+    # Choose best RR ground truth signal
+    if resp_waveform is not None:
+        rr_gt_signal = resp_waveform
+        rr_gt_fps = physio_fps
+        rr_gt_source = "waveform"
+    elif gt_resp is not None:
+        rr_gt_signal = gt_resp
+        rr_gt_fps = fps
+        rr_gt_source = "rate"
+    else:
+        rr_gt_signal = None
+        rr_gt_fps = None
+        rr_gt_source = None
+
+    # ── 4. Signal Comparison Plots ──
     for method_name, result in sample_results.items():
         if np.isnan(result.get("hr_bpm", float("nan"))):
             continue
 
-        # Get ROI names for this method
         method_cfg = config["methods"].get(method_name, {})
         roi_names = method_cfg.get("rois", [])
 
         if not roi_names:
             continue
 
-        # Extract predicted signal from ROIs
         roi_signals = extract_all_roi_signals(
             cropped, rois, roi_names)
 
@@ -311,8 +319,8 @@ def save_visualisations(config, sample, cropped, keypoints,
             if np.isnan(clean).all():
                 continue
 
-            # ── HR: Predicted vs Ground Truth ──
-            if gt_pulse is not None and len(gt_pulse) > 10:
+            # ── HR Signal Comparison ──
+            if hr_gt_signal is not None and len(hr_gt_signal) > 10:
                 bp = config["signal"]["hr_bandpass"]
                 try:
                     filtered = bandpass_filter(
@@ -320,58 +328,124 @@ def save_visualisations(config, sample, cropped, keypoints,
                         low=bp["low"], high=bp["high"],
                         order=bp["order"],
                     )
-                    gt_filtered = bandpass_filter(
-                        gt_pulse[:len(filtered)], fps,
-                        low=bp["low"], high=bp["high"],
-                        order=bp["order"],
-                    )
+
                     save_signal_comparison(
                         predicted_signal=filtered,
-                        gt_signal=gt_filtered,
+                        gt_signal=hr_gt_signal,
                         fps=fps,
                         predicted_bpm=result["hr_bpm"],
-                        gt_bpm=sample.get("hr_bpm", float("nan")),
+                        gt_bpm=sample.get(
+                            "hr_bpm", float("nan")),
                         signal_type="hr",
                         method_name=method_name,
                         recording_id=recording_id,
                         save_dir=save_dir,
                         bandpass=(bp["low"], bp["high"]),
+                        gt_fps=hr_gt_fps,
                     )
                 except Exception as e:
                     warnings.warn(
-                        f"    HR comparison plot failed: {e}")
+                        f"    HR comparison failed: {e}")
 
-            # ── RR: Predicted vs Ground Truth ──
-            if (gt_resp is not None and len(gt_resp) > 10
+            # ── RR Signal Comparison ──
+            if (rr_gt_signal is not None
+                    and len(rr_gt_signal) > 10
                     and not np.isnan(
                         result.get("rr_bpm", float("nan")))):
                 bp_rr = config["signal"]["rr_bandpass"]
                 try:
                     filtered_rr = bandpass_filter(
                         clean, fps,
-                        low=bp_rr["low"], high=bp_rr["high"],
+                        low=bp_rr["low"],
+                        high=bp_rr["high"],
                         order=bp_rr["order"],
                     )
-                    gt_filtered_rr = bandpass_filter(
-                        gt_resp[:len(filtered_rr)], fps,
-                        low=bp_rr["low"], high=bp_rr["high"],
-                        order=bp_rr["order"],
-                    )
+
                     save_signal_comparison(
                         predicted_signal=filtered_rr,
-                        gt_signal=gt_filtered_rr,
+                        gt_signal=rr_gt_signal,
                         fps=fps,
                         predicted_bpm=result["rr_bpm"],
-                        gt_bpm=sample.get("rr_bpm", float("nan")),
+                        gt_bpm=sample.get(
+                            "rr_bpm", float("nan")),
                         signal_type="rr",
                         method_name=method_name,
                         recording_id=recording_id,
                         save_dir=save_dir,
-                        bandpass=(bp_rr["low"], bp_rr["high"]),
+                        bandpass=(bp_rr["low"],
+                                  bp_rr["high"]),
+                        gt_fps=rr_gt_fps,
                     )
                 except Exception as e:
                     warnings.warn(
-                        f"    RR comparison plot failed: {e}")
+                        f"    RR comparison failed: {e}")
+
+            # ── Physiology Plots (BP4D+ only) ──
+            if bp_waveform is not None and physio_fps:
+                try:
+                    filtered = bandpass_filter(
+                        clean, fps,
+                        low=config["signal"][
+                            "hr_bandpass"]["low"],
+                        high=config["signal"][
+                            "hr_bandpass"]["high"],
+                        order=config["signal"][
+                            "hr_bandpass"]["order"],
+                    )
+                    save_gt_physiology_plot(
+                        physio_signals={
+                            "waveform": bp_waveform,
+                            "rate_bpm": gt_pulse
+                            if gt_pulse is not None
+                            else np.array([]),
+                        },
+                        predicted_signal=filtered,
+                        fps_video=fps,
+                        fps_physio=physio_fps,
+                        predicted_bpm=result["hr_bpm"],
+                        gt_bpm=sample.get(
+                            "hr_bpm", float("nan")),
+                        signal_type="hr",
+                        method_name=method_name,
+                        recording_id=recording_id,
+                        save_dir=save_dir,
+                    )
+                except Exception as e:
+                    warnings.warn(
+                        f"    HR physiology failed: {e}")
+
+            if resp_waveform is not None and physio_fps:
+                try:
+                    filtered_rr = bandpass_filter(
+                        clean, fps,
+                        low=config["signal"][
+                            "rr_bandpass"]["low"],
+                        high=config["signal"][
+                            "rr_bandpass"]["high"],
+                        order=config["signal"][
+                            "rr_bandpass"]["order"],
+                    )
+                    save_gt_physiology_plot(
+                        physio_signals={
+                            "waveform": resp_waveform,
+                            "rate_bpm": gt_resp
+                            if gt_resp is not None
+                            else np.array([]),
+                        },
+                        predicted_signal=filtered_rr,
+                        fps_video=fps,
+                        fps_physio=physio_fps,
+                        predicted_bpm=result["rr_bpm"],
+                        gt_bpm=sample.get(
+                            "rr_bpm", float("nan")),
+                        signal_type="rr",
+                        method_name=method_name,
+                        recording_id=recording_id,
+                        save_dir=save_dir,
+                    )
+                except Exception as e:
+                    warnings.warn(
+                        f"    RR physiology failed: {e}")
 
             break  # Only first valid ROI
 
@@ -381,18 +455,20 @@ def save_visualisations(config, sample, cropped, keypoints,
 # ─────────────────────────────────────────────────────────────────
 
 def collect_results(method_results, sample, method_name):
-    """
-    Convert method output + ground truth into the format
-    that evaluate_algorithm() expects.
-    """
+    """Convert method output + GT into evaluation format."""
     return {
-        "hr_estimated":    method_results.get("hr_bpm", float("nan")),
-        "hr_ground_truth": sample.get("hr_bpm", float("nan")),
-        "rr_estimated":    method_results.get("rr_bpm", float("nan")),
-        "rr_ground_truth": sample.get("rr_bpm", float("nan")),
+        "hr_estimated":    method_results.get(
+            "hr_bpm", float("nan")),
+        "hr_ground_truth": sample.get(
+            "hr_bpm", float("nan")),
+        "rr_estimated":    method_results.get(
+            "rr_bpm", float("nan")),
+        "rr_ground_truth": sample.get(
+            "rr_bpm", float("nan")),
         "subject":         sample.get("subject", "?"),
         "task":            sample.get("task", "?"),
-        "recording_id":    sample.get("recording_id", "unknown"),
+        "recording_id":    sample.get(
+            "recording_id", "unknown"),
         "method":          method_name,
     }
 
@@ -423,11 +499,11 @@ def run_pipeline(config_path="configs/run_config.yaml"):
         return
 
     # ── Init results table ──
-    save_dir = config.get("output", {}).get("save_dir", "results/")
+    save_dir = config.get("output", {}).get(
+        "save_dir", "results/")
     os.makedirs(save_dir, exist_ok=True)
     table = ResultsTable(save_path=save_dir)
 
-    # Per-method result collectors
     all_results = {name: [] for name in methods}
 
     # ── Processing settings ──
@@ -446,7 +522,8 @@ def run_pipeline(config_path="configs/run_config.yaml"):
         fps = meta["fps"]
 
         print(f"\n{'─' * 50}")
-        print(f"  Sample {idx + 1}/{len(dataset)}: {recording_id}")
+        print(f"  Sample {idx + 1}/{len(dataset)}: "
+              f"{recording_id}")
         print(f"  Total frames: {meta['total_frames']}, "
               f"FPS: {fps:.1f}")
         print(f"{'─' * 50}")
@@ -461,9 +538,9 @@ def run_pipeline(config_path="configs/run_config.yaml"):
                     )
             else:
                 sample = dataset[idx]
-                cropped, keypoints, rois = run_yolo_and_rois(
-                    sample["frames"], config
-                )
+                cropped, keypoints, rois = \
+                    run_yolo_and_rois(
+                        sample["frames"], config)
         except Exception as e:
             warnings.warn(
                 f"  YOLO failed for {recording_id}: {e}")
@@ -471,8 +548,7 @@ def run_pipeline(config_path="configs/run_config.yaml"):
 
         # ── Run methods ──
         sample_results = run_methods(
-            methods, cropped, keypoints, rois, fps
-        )
+            methods, cropped, keypoints, rois, fps)
 
         # ── Save visualisations ──
         try:
@@ -485,7 +561,8 @@ def run_pipeline(config_path="configs/run_config.yaml"):
 
         # ── Collect for evaluation ──
         for method_name, result in sample_results.items():
-            entry = collect_results(result, meta, method_name)
+            entry = collect_results(
+                result, meta, method_name)
             all_results[method_name].append(entry)
 
             if verbose:
@@ -503,8 +580,8 @@ def run_pipeline(config_path="configs/run_config.yaml"):
 
     elapsed = time.time() - total_start
     print(f"\n{'=' * 60}")
-    print(f"  Processing complete: {len(dataset)} samples in "
-          f"{elapsed:.1f}s")
+    print(f"  Processing complete: {len(dataset)} samples "
+          f"in {elapsed:.1f}s")
     print(f"{'=' * 60}")
 
     # ── Per-Sample CSV ──
@@ -517,8 +594,8 @@ def run_pipeline(config_path="configs/run_config.yaml"):
         df = pd.DataFrame(all_rows)
         summary_dir = os.path.join(save_dir, "summary")
         os.makedirs(summary_dir, exist_ok=True)
-        sample_csv = os.path.join(summary_dir,
-                                  "per_sample_results.csv")
+        sample_csv = os.path.join(
+            summary_dir, "per_sample_results.csv")
         df.to_csv(sample_csv, index=False)
         print(f"Per-sample results: {sample_csv}")
 
