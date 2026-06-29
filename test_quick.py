@@ -16,6 +16,7 @@ from methods.ica import ICAMethod
 from methods.garbey import GarbeyMethod
 from utils.visualization import (
     save_roi_overlay,
+    save_method_roi_overlay,
     save_signal_comparison,
     save_gt_physiology_plot,
 )
@@ -97,9 +98,26 @@ for i in range(len(keypoints)):
 n_ok = sum(1 for r in rois_per_frame if r is not None)
 print(f"YOLO: {n_ok}/{len(keypoints)} frames with keypoints")
 
-# ── ROI Overlay ──
+# ── ROI Overlay (allgemein) ──
 save_roi_overlay(cropped[0], keypoints[0],
                  recording_id, "results/")
+
+# ── Method-specific ROI Overlays ──
+method_configs = {
+    "thermal_mean": config["methods"]["thermal_mean"],
+    "ica":          config["methods"]["ica"],
+    "garbey":       config["methods"]["garbey"],
+}
+
+for m_name, m_cfg in method_configs.items():
+    try:
+        save_method_roi_overlay(
+            cropped[0], keypoints[0],
+            m_name, m_cfg,
+            recording_id, "results/",
+        )
+    except Exception as e:
+        print(f"  Method overlay failed ({m_name}): {e}")
 
 # ── Methode 1: Thermal Mean ──
 print("\n1. Thermal Mean:")
