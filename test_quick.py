@@ -1,6 +1,9 @@
-"""Quick test with BP4D+ dataset – 100 frames + signal comparison."""
+"""Quick test with BP4D+ dataset – 100 frames."""
+import os
 import numpy as np
 import yaml
+from scipy.signal import resample
+
 from data.bp4d_loader import BP4DDataset
 from utils.yolo_processing import process_with_yolo
 from preprocessing.roi_extraction import compute_rois
@@ -32,7 +35,7 @@ dataset = BP4DDataset(
     fps=25,
 )
 
-# ── Test get_metadata ──
+# ── Metadata ──
 print("\n── Test get_metadata() ──")
 meta = dataset.get_metadata(0)
 print(f"Recording: {meta['recording_id']}")
@@ -49,24 +52,21 @@ fps = sample["fps"]
 recording_id = sample.get("recording_id", "F001_T1")
 
 print(f"\nFrames: {frames.shape}, {frames.dtype}")
-print(f"RAM: ~{frames.nbytes / 1e6:.0f} MB")
 print(f"Dauer: {len(frames)/fps:.1f}s bei {fps} FPS")
 
 # ── Ground Truth ──
 gt_hr = sample["hr_bpm"]
 gt_rr = sample["rr_bpm"]
-gt_pulse = sample.get("pulse_rate", None)
-gt_resp = sample.get("resp_rate", None)
+print(f"Ground Truth: HR={gt_hr:.1f}, RR={gt_rr:.1f} BPM")
 
-print(f"\nGround Truth: HR={gt_hr:.1f} BPM, RR={gt_rr:.1f} BPM")
-
-# ── Load raw physiology signals ──
-import os
+# ── Load raw physiology waveforms ──
 physio_dir = os.path.join(
     ds_config["root_dir"], "Physiology", "F001", "T1")
 
-bp_wave = np.loadtxt(os.path.join(physio_dir, "BP_mmHg.txt"))
-resp_wave = np.loadtxt(os.path.join(physio_dir, "Resp_Volts.txt"))
+bp_wave = np.loadtxt(
+    os.path.join(physio_dir, "BP_mmHg.txt"))
+resp_wave = np.loadtxt(
+    os.path.join(physio_dir, "Resp_Volts.txt"))
 pulse_rate = np.loadtxt(
     os.path.join(physio_dir, "Pulse Rate_BPM.txt"))
 resp_rate = np.loadtxt(
@@ -108,9 +108,9 @@ tm = ThermalMeanMethod(
     config["signal"],
 )
 r1 = tm.estimate(cropped, rois_per_frame, fps)
-print(f"   HR: {r1['hr_bpm']:.1f} BPM (GT: {gt_hr:.1f}, "
+print(f"   HR: {r1['hr_bpm']:.1f} (GT: {gt_hr:.1f}, "
       f"Error: {abs(r1['hr_bpm'] - gt_hr):.1f})")
-print(f"   RR: {r1['rr_bpm']:.1f} BPM (GT: {gt_rr:.1f})")
+print(f"   RR: {r1['rr_bpm']:.1f} (GT: {gt_rr:.1f})")
 
 # ── Methode 2: ICA ──
 print("\n2. ICA:")
@@ -119,9 +119,9 @@ ica = ICAMethod(
     config["signal"],
 )
 r2 = ica.estimate(cropped, rois_per_frame, fps)
-print(f"   HR: {r2['hr_bpm']:.1f} BPM (GT: {gt_hr:.1f}, "
+print(f"   HR: {r2['hr_bpm']:.1f} (GT: {gt_hr:.1f}, "
       f"Error: {abs(r2['hr_bpm'] - gt_hr):.1f})")
-print(f"   RR: {r2['rr_bpm']:.1f} BPM (GT: {gt_rr:.1f})")
+print(f"   RR: {r2['rr_bpm']:.1f} (GT: {gt_rr:.1f})")
 
 # ── Methode 3: Garbey ──
 print("\n3. Garbey:")
@@ -130,9 +130,9 @@ garbey = GarbeyMethod(
     config["signal"],
 )
 r3 = garbey.estimate(cropped, keypoints, fps)
-print(f"   HR: {r3['hr_bpm']:.1f} BPM (GT: {gt_hr:.1f}, "
+print(f"   HR: {r3['hr_bpm']:.1f} (GT: {gt_hr:.1f}, "
       f"Error: {abs(r3['hr_bpm'] - gt_hr):.1f})")
-print(f"   RR: {r3['rr_bpm']:.1f} BPM (GT: {gt_rr:.1f})")
+print(f"   RR: {r3['rr_bpm']:.1f} (GT: {gt_rr:.1f})")
 
 # ── Signal Plots ──
 print(f"\n{'─' * 50}")
@@ -154,8 +154,9 @@ for roi_name, raw_signal in roi_signals.items():
         continue
 
     for method_name, result in methods_results.items():
-        bp = config["signal"]["hr_bandpass"]
 
+        # ── HR Comparison ──
+        bp = config["signal"]["hr_bandpass"]
         try:
             filtered = bandpass_filter(
                 clean, fps,
@@ -163,23 +164,49 @@ for roi_name, raw_signal in roi_signals.items():
                 order=bp["order"],
             )
 
-            # ── Signal Comparison (predicted vs GT rate) ──
-            if gt_pulse is not None and len(gt_pulse) > 10:
-                gt_hr_signal = gt_pulse[:len(filtered)]
-                save_signal_comparison(
-                    predicted_signal=filtered,
-                    gt_signal=gt_hr_signal,
-                    fps=fps,
-                    predicted_bpm=result["hr_bpm"],
-                    gt_bpm=gt_hr,
-                    signal_type="hr",
-                    method_name=method_name,
-                    recording_id=recording_id,
-                    save_dir="results/",
-                    bandpass=(bp["low"], bp["high"]),
-                )
+            save_signal_comparison(
+                predicted_signal=filtered,
+                gt_signal=bp_wave,
+                fps=fps,
+                predicted_bpm=result["hr_bpm"],
+                gt_bpm=gt_hr,
+                signal_type="hr",
+                method_name=method_name,
+                recording_id=recording_id,
+                save_dir="results/",
+                bandpass=(bp["low"], bp["high"]),
+                gt_fps=fps_physio,
+            )
+        except Exception as e:
+            print(f"    HR ({method_name}): {e}")
 
-            # ── Physiology Plot (raw waveform!) ──
+        # ── RR Comparison ──
+        bp_rr = config["signal"]["rr_bandpass"]
+        try:
+            filtered_rr = bandpass_filter(
+                clean, fps,
+                low=bp_rr["low"], high=bp_rr["high"],
+                order=bp_rr["order"],
+            )
+
+            save_signal_comparison(
+                predicted_signal=filtered_rr,
+                gt_signal=resp_wave,
+                fps=fps,
+                predicted_bpm=result["rr_bpm"],
+                gt_bpm=gt_rr,
+                signal_type="rr",
+                method_name=method_name,
+                recording_id=recording_id,
+                save_dir="results/",
+                bandpass=(bp_rr["low"], bp_rr["high"]),
+                gt_fps=fps_physio,
+            )
+        except Exception as e:
+            print(f"    RR ({method_name}): {e}")
+
+        # ── HR Physiology ──
+        try:
             save_gt_physiology_plot(
                 physio_signals={
                     "waveform": bp_wave,
@@ -195,19 +222,11 @@ for roi_name, raw_signal in roi_signals.items():
                 recording_id=recording_id,
                 save_dir="results/",
             )
-
         except Exception as e:
-            print(f"    HR plot ({method_name}) failed: {e}")
+            print(f"    HR physio ({method_name}): {e}")
 
-        # ── RR Physiology Plot ──
-        bp_rr = config["signal"]["rr_bandpass"]
+        # ── RR Physiology ──
         try:
-            filtered_rr = bandpass_filter(
-                clean, fps,
-                low=bp_rr["low"], high=bp_rr["high"],
-                order=bp_rr["order"],
-            )
-
             save_gt_physiology_plot(
                 physio_signals={
                     "waveform": resp_wave,
@@ -223,9 +242,8 @@ for roi_name, raw_signal in roi_signals.items():
                 recording_id=recording_id,
                 save_dir="results/",
             )
-
         except Exception as e:
-            print(f"    RR plot ({method_name}) failed: {e}")
+            print(f"    RR physio ({method_name}): {e}")
 
     break  # Only first valid ROI
 
@@ -246,5 +264,5 @@ print(f"  {'Garbey':<15} {r3['hr_bpm']:>7.1f} "
       f"{gt_hr:>8.1f} {abs(r3['hr_bpm']-gt_hr):>7.1f} "
       f"{r3['rr_bpm']:>8.1f} {gt_rr:>8.1f}")
 
-print(f"\nPlots gespeichert in: results/{recording_id}/")
+print(f"\nPlots: results/{recording_id}/")
 print("FERTIG!")
