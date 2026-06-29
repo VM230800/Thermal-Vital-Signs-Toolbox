@@ -26,3 +26,18 @@ with open('configs/bp4d.yaml') as f:
     ds_config = yaml.safe_load(f)
 print('root_dir aus Config:', repr(ds_config['root_dir']))
 "
+
+
+
+BP4DDataset: 0 recordings found
+
+── Test get_metadata() ──
+Traceback (most recent call last):
+  File "/Users/valeriamoltschanov/Desktop/test_toolbox/test_quick.py", line 40, in <module>
+    meta = dataset.get_metadata(0)
+           ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/valeriamoltschanov/Desktop/test_toolbox/data/base_loader.py", line 170, in get_metadata
+    sample_info = self.samples[idx]
+                  ~~~~~~~~~~~~^^^^^
+IndexError: list index out of range
+
