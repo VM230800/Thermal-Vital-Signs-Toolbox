@@ -84,7 +84,7 @@ class BP4DDataset(BaseLoader):
         if not frames:
             raise ValueError(f"Video is empty: {wmv_path}")
 
-        return np.array(frames, dtype=np.float32)
+        return np.array(frames, dtype=np.float16)
 
     def _load_single_frame(self, sample_info, frame_idx):
         """Load one frame from video (for streaming)."""
