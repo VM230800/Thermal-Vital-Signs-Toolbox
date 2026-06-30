@@ -21,6 +21,13 @@ from utils.visualization import (
     save_gt_physiology_plot,
 )
 
+# ══════════════════════════════════════════════════
+#  HIER ÄNDERN FÜR ANDEREN SUBJECT:
+# ══════════════════════════════════════════════════
+SUBJECT = "F004"
+TASK = "T1"
+# ══════════════════════════════════════════════════
+
 # ── Load config ──
 with open("configs/run_config.yaml") as f:
     config = yaml.safe_load(f)
@@ -31,8 +38,8 @@ with open("configs/bp4d.yaml") as f:
 # ── Load dataset ──
 dataset = BP4DDataset(
     root_dir=ds_config["root_dir"],
-    subjects=["F001"],
-    tasks=["T1"],
+    subjects=[SUBJECT],
+    tasks=[TASK],
     fps=25,
 )
 
@@ -50,7 +57,8 @@ sample = dataset[0]
 
 frames = sample["frames"][:100]
 fps = sample["fps"]
-recording_id = sample.get("recording_id", "F001_T1")
+recording_id = sample.get(
+    "recording_id", f"{SUBJECT}_{TASK}")
 
 print(f"\nFrames: {frames.shape}, {frames.dtype}")
 print(f"Dauer: {len(frames)/fps:.1f}s bei {fps} FPS")
@@ -62,7 +70,7 @@ print(f"Ground Truth: HR={gt_hr:.1f}, RR={gt_rr:.1f} BPM")
 
 # ── Load raw physiology waveforms ──
 physio_dir = os.path.join(
-    ds_config["root_dir"], "Physiology", "F001", "T1")
+    ds_config["root_dir"], "Physiology", SUBJECT, TASK)
 
 bp_wave = np.loadtxt(
     os.path.join(physio_dir, "BP_mmHg.txt"))
