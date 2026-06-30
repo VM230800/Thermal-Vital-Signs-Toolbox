@@ -506,18 +506,17 @@ def collect_results(method_results, sample, method_name):
 # ─────────────────────────────────────────────────────────────────
 
 def run_pipeline(config_path="configs/run_config.yaml"):
-    """Run the full pipeline."""
+    """Run the full pipeline – supports multiple datasets."""
 
     print("=" * 60)
     print("  Thermal Vital Signs Toolbox")
     print("=" * 60)
 
     # ── Load config ──
-    config, dataset_config = load_config(config_path)
-    verbose = config.get("output", {}).get("verbose", True)
+    with open(config_path) as f:
+        config = yaml.safe_load(f)
 
-    # ── Load dataset ──
-    dataset = load_dataset(config, dataset_config)
+    verbose = config.get("output", {}).get("verbose", True)
 
     # ── Init methods ──
     methods = init_methods(config)
@@ -534,87 +533,120 @@ def run_pipeline(config_path="configs/run_config.yaml"):
 
     all_results = {name: [] for name in methods}
 
-    # ── Processing settings ──
-    processing = config.get("processing", {})
-    max_frames = processing.get("max_frames", None)
-    use_streaming = processing.get("streaming", True)
+    # ── Support single or multiple datasets ──
+    if "datasets" in config:
+        dataset_list = config["datasets"]
+    else:
+        # Backwards compatible: single dataset
+        dataset_list = [{
+            "name": config["dataset"],
+            "config": config["dataset_config"],
+        }]
 
-    # ── Process each sample ──
     total_start = time.time()
 
-    for idx in range(len(dataset)):
+    # ── Loop over datasets ──
+    for ds_entry in dataset_list:
+        ds_name = ds_entry["name"]
+        ds_config_path = ds_entry["config"]
 
-        # ── Load metadata (WITHOUT frames) ──
-        meta = dataset.get_metadata(idx)
-        recording_id = meta["recording_id"]
-        fps = meta["fps"]
+        with open(ds_config_path) as f:
+            dataset_config = yaml.safe_load(f)
 
-        print(f"\n{'─' * 50}")
-        print(f"  Sample {idx + 1}/{len(dataset)}: "
-              f"{recording_id}")
-        print(f"  Total frames: {meta['total_frames']}, "
-              f"FPS: {fps:.1f}")
-        print(f"{'─' * 50}")
+        print(f"\n{'═' * 60}")
+        print(f"  Dataset: {ds_name.upper()}")
+        print(f"{'═' * 60}")
 
-        # ── YOLO + ROIs ──
-        try:
-            if use_streaming:
-                cropped, keypoints, rois = \
-                    run_yolo_and_rois_streaming(
-                        dataset, idx, config,
-                        max_frames=max_frames,
-                    )
-            else:
-                sample = dataset[idx]
-                cropped, keypoints, rois = \
-                    run_yolo_and_rois(
-                        sample["frames"], config)
-        except Exception as e:
-            warnings.warn(
-                f"  YOLO failed for {recording_id}: {e}")
-            continue
+        # ── Build config for this dataset ──
+        ds_config = config.copy()
+        ds_config["dataset"] = ds_name
+        ds_config["dataset_config"] = ds_config_path
 
-        # ── Run methods ──
+        # ── Load dataset ──
+        dataset = load_dataset(ds_config, dataset_config)
+
+        # ── Processing settings ──
         processing = config.get("processing", {})
+        max_frames = processing.get("max_frames", None)
+        use_streaming = processing.get("streaming", True)
         frame_step = processing.get("frame_step", 1)
-        effective_fps = fps / frame_step
 
-        sample_results = run_methods(
-            methods, cropped, keypoints, rois,
-            effective_fps)
+        # ── Process each sample ──
+        for idx in range(len(dataset)):
 
-        # ── Save visualisations ──
-        try:
-            save_visualisations(
-                config, meta, cropped, keypoints,
-                rois, sample_results,
-            )
-        except Exception as e:
-            warnings.warn(f"  Visualisation failed: {e}")
+            meta = dataset.get_metadata(idx)
+            recording_id = meta["recording_id"]
+            fps = meta["fps"]
 
-        # ── Collect for evaluation ──
-        for method_name, result in sample_results.items():
-            entry = collect_results(
-                result, meta, method_name)
-            all_results[method_name].append(entry)
+            print(f"\n{'─' * 50}")
+            print(f"  Sample {idx + 1}/{len(dataset)}: "
+                  f"{recording_id}")
+            print(f"  Frames: {meta['total_frames']}, "
+                  f"FPS: {fps:.1f}")
+            print(f"{'─' * 50}")
 
-            if verbose:
-                gt_hr = entry["hr_ground_truth"]
-                gt_rr = entry["rr_ground_truth"]
-                est_hr = entry["hr_estimated"]
-                est_rr = entry["rr_estimated"]
-                print(f"    {method_name}: "
-                      f"HR {est_hr:.1f} vs {gt_hr:.1f}, "
-                      f"RR {est_rr:.1f} vs {gt_rr:.1f}")
+            # ── YOLO + ROIs ──
+            try:
+                if use_streaming:
+                    cropped, keypoints, rois = \
+                        run_yolo_and_rois_streaming(
+                            dataset, idx, ds_config,
+                            max_frames=max_frames,
+                        )
+                else:
+                    sample = dataset[idx]
+                    cropped, keypoints, rois = \
+                        run_yolo_and_rois(
+                            sample["frames"], ds_config)
+            except Exception as e:
+                warnings.warn(
+                    f"  YOLO failed for "
+                    f"{recording_id}: {e}")
+                continue
 
-        # ── Free RAM ──
-        del cropped, keypoints, rois
-        gc.collect()
+            # ── Run methods ──
+            effective_fps = fps / frame_step
+            sample_results = run_methods(
+                methods, cropped, keypoints,
+                rois, effective_fps)
+
+            # ── Save visualisations ──
+            try:
+                save_visualisations(
+                    ds_config, meta, cropped,
+                    keypoints, rois, sample_results,
+                )
+            except Exception as e:
+                warnings.warn(
+                    f"  Visualisation failed: {e}")
+
+            # ── Collect for evaluation ──
+            for method_name, result in \
+                    sample_results.items():
+                entry = collect_results(
+                    result, meta, method_name)
+                entry["dataset"] = ds_name.upper()
+                all_results[method_name].append(entry)
+
+                if verbose:
+                    gt_hr = entry["hr_ground_truth"]
+                    gt_rr = entry["rr_ground_truth"]
+                    est_hr = entry["hr_estimated"]
+                    est_rr = entry["rr_estimated"]
+                    print(
+                        f"    {method_name}: "
+                        f"HR {est_hr:.1f} vs "
+                        f"{gt_hr:.1f}, "
+                        f"RR {est_rr:.1f} vs "
+                        f"{gt_rr:.1f}")
+
+            # ── Free RAM ──
+            del cropped, keypoints, rois
+            gc.collect()
 
     elapsed = time.time() - total_start
     print(f"\n{'=' * 60}")
-    print(f"  Processing complete: {len(dataset)} samples "
-          f"in {elapsed:.1f}s")
+    print(f"  Processing complete in {elapsed:.1f}s")
     print(f"{'=' * 60}")
 
     # ── Per-Sample CSV ──
@@ -632,25 +664,32 @@ def run_pipeline(config_path="configs/run_config.yaml"):
         df.to_csv(sample_csv, index=False)
         print(f"Per-sample results: {sample_csv}")
 
-    # ── Evaluate ──
-    dataset_name = config["dataset"].upper()
+    # ── Evaluate per dataset ──
+    for ds_entry in dataset_list:
+        ds_name = ds_entry["name"].upper()
 
-    for method_name, results in all_results.items():
-        if not results:
-            continue
+        for method_name, results in all_results.items():
+            ds_results = [
+                r for r in results
+                if r.get("dataset") == ds_name
+            ]
+            if not ds_results:
+                continue
 
-        print(f"\nEvaluating: {method_name}")
+            print(f"\nEvaluating: {ds_name} / "
+                  f"{method_name}")
 
-        eval_result = evaluate_algorithm(
-            results,
-            algo_name=method_name,
-            save_dir=os.path.join(save_dir, "summary"),
-        )
+            eval_result = evaluate_algorithm(
+                ds_results,
+                algo_name=method_name,
+                save_dir=os.path.join(
+                    save_dir, "summary"),
+            )
 
-        table.add(dataset_name, method_name, "HR",
-                   eval_result["hr"])
-        table.add(dataset_name, method_name, "RR",
-                   eval_result["rr"])
+            table.add(ds_name, method_name, "HR",
+                       eval_result["hr"])
+            table.add(ds_name, method_name, "RR",
+                       eval_result["rr"])
 
     # ── Save results ──
     table.save_path = os.path.join(save_dir, "summary")
