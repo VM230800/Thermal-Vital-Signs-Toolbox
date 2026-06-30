@@ -47,11 +47,11 @@ methods:
     line_width: 3
     lines:
       hr:
-        p1: 0
-        p2: 2
+        p1: 17
+        p2: 1
       rr:
-        p1: 48
-        p2: 53
+        p1: 30
+        p2: 49
 
 # Signal processing
 signal:
