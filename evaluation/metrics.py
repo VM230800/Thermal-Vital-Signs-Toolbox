@@ -94,7 +94,7 @@ def evaluate_algorithm(results, algo_name, save_dir="results/"):
     print_metrics(rr_metrics, label="RR")
 
     # Bland-Altman Plots
-    if hr_metrics["n"] >= 3:
+    if hr_metrics["n"] >= 2:
         ba_hr = BlandAltman(
             gold_std    = hr_gt[~np.isnan(hr_gt) & ~np.isnan(hr_est)],
             new_measure = hr_est[~np.isnan(hr_gt) & ~np.isnan(hr_est)],
@@ -111,7 +111,7 @@ def evaluate_algorithm(results, algo_name, save_dir="results/"):
             y_label="Estimated HR [BPM]",
         )
 
-    if rr_metrics["n"] >= 3:
+    if rr_metrics["n"] >= 2:
         ba_rr = BlandAltman(
             gold_std    = rr_gt[~np.isnan(rr_gt) & ~np.isnan(rr_est)],
             new_measure = rr_est[~np.isnan(rr_gt) & ~np.isnan(rr_est)],
