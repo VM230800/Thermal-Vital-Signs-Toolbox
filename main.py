@@ -575,8 +575,13 @@ def run_pipeline(config_path="configs/run_config.yaml"):
             continue
 
         # ── Run methods ──
+        processing = config.get("processing", {})
+        frame_step = processing.get("frame_step", 1)
+        effective_fps = fps / frame_step
+
         sample_results = run_methods(
-            methods, cropped, keypoints, rois, fps)
+            methods, cropped, keypoints, rois,
+            effective_fps)
 
         # ── Save visualisations ──
         try:
