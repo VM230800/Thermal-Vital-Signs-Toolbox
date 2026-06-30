@@ -4,8 +4,8 @@ data/npz_loader.py
 NPZ thermal dataset loader. Inherits from BaseLoader.
 Only implements NPZ-specific logic.
 
-Optimised: NPZ arrays are loaded ONCE into RAM and cached,
-not lazy-read from disk for every single frame.
+Optimised: NPZ file is memory-mapped, so only accessed
+frames are read from disk – not the entire array.
 """
 
 import os
@@ -22,7 +22,7 @@ class NPZDataset(BaseLoader):
                  cache_dir="cache",
                  force_preprocess=False):
         self.recordings_filter = recordings
-        self._npz_cache = {}  # path → dict of arrays
+        self._npz_cache = {}
 
         super().__init__(
             root_dir=root_dir,
@@ -34,27 +34,20 @@ class NPZDataset(BaseLoader):
         )
 
     # ─────────────────────────────────────────────────────
-    # NPZ file cache – load arrays into RAM once
+    # NPZ file cache – memory-mapped, fast
     # ─────────────────────────────────────────────────────
 
     def _get_npz_data(self, npz_path):
         """
-        Load NPZ arrays into RAM once and cache them.
-
-        NpzFile lazy-loads from disk on every access
-        → extremely slow for per-frame streaming.
-        This caches the actual numpy arrays instead.
+        Memory-map NPZ file. Reads only accessed
+        frames from disk, not the entire array.
         """
         if npz_path not in self._npz_cache:
-            print(f"    Loading NPZ into RAM: "
-                  f"{os.path.basename(npz_path)}...")
-            raw = np.load(npz_path, allow_pickle=True)
-            self._npz_cache[npz_path] = {
-                key: raw[key] for key in raw.files
-            }
-            raw.close()
-            print(f"    Done. Keys: "
-                  f"{list(self._npz_cache[npz_path].keys())}")
+            self._npz_cache[npz_path] = np.load(
+                npz_path,
+                allow_pickle=True,
+                mmap_mode="r",
+            )
         return self._npz_cache[npz_path]
 
     def _clear_cache(self, npz_path=None):
@@ -112,8 +105,8 @@ class NPZDataset(BaseLoader):
 
     def _load_single_frame(self, sample_info, frame_idx):
         """
-        Load one frame from cached NPZ arrays.
-        Arrays are in RAM → instant access.
+        Load one frame from memory-mapped NPZ.
+        Only reads this frame from disk.
         """
         subj, rec_id, npz_path = sample_info
         data = self._get_npz_data(npz_path)
