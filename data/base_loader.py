@@ -3,7 +3,7 @@ data/base_loader.py
 ===================
 Abstract base class for all dataset loaders.
 
-Handles all SHARED logic:
+Handles all shared logic:
     - __len__, __getitem__
     - Warmup removal
     - iter_frames (RAM-friendly streaming)
@@ -11,7 +11,7 @@ Handles all SHARED logic:
     - Cache system (save/load preprocessed data)
     - Standardised return dict
 
-Child classes only implement DATASET-SPECIFIC logic:
+Child classes only implement data-specific logic:
     - _discover_samples()    → find recordings on disk
     - _load_frames()         → load all frames from one recording
     - _load_single_frame()   → load one frame by index
@@ -186,7 +186,7 @@ class BaseLoader(ABC):
 
     def get_metadata(self, idx):
         """
-        Get recording metadata WITHOUT loading any frames.
+        Get recording metadata without loading any frames.
 
         Returns:
             dict with fps, subject, task, recording_id,
