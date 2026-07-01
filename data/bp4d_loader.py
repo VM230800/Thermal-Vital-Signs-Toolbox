@@ -4,7 +4,7 @@ data/bp4d_loader.py
 BP4D+ dataset loader. Inherits from BaseLoader.
 Only implements BP4D-specific logic.
 
-Optimised: VideoCapture is cached for streaming,
+VideoCapture is cached for streaming,
 not re-opened for every single frame.
 """
 
@@ -131,7 +131,7 @@ class BP4DDataset(BaseLoader):
     def _load_single_frame(self, sample_info, frame_idx):
         """
         Load one frame from video (for streaming).
-        Uses cached VideoCapture – file opened only ONCE.
+        Uses cached VideoCapture – file opened only once.
         """
         subj, task, wmv_path = sample_info
 
