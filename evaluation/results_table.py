@@ -123,8 +123,6 @@ class ResultsTable:
                  ) -> str:
         """
         Save results as a formatted PDF table.
-
-        Styled for publication:
         - HR and RR sections visually separated
         - Best MAE per group highlighted in green
         - Standard errors shown next to MAE
