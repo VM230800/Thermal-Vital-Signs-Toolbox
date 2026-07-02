@@ -35,6 +35,7 @@ python main.py
 ## Repository Structure
 
 ```text
+Thermal Vital Signs Toolbox
 |
 |-- main.py                      <- Pipeline orchestration
 |
@@ -74,4 +75,29 @@ python main.py
     |-- yolo_keypoints.py        <- keypoint names and regions
     +-- yolo_processing.py       <- YOLO batch processing
 ```
+--- 
 
+## Supported Datasets
+```text
+1. BP4D+
+   Format:.wmv videos, colour-mapped thermal
+   Frame rate: 25 fps
+   Ground truth: Pulse Rate_BPM.txt, Respiration Rate_BPM.txt
+2. NPZ
+   Format: .npz, raw temperature in degrees C
+   Frame rate: 30 fps
+   Ground truth: Raw pulse/respiration waveforms
+
+Both datasets are accessed through a common BaseLoader interface, so a new
+dataset only needs to implement:
+```bash
+_discover_samples()
+_load_frames()
+_load_single_frame()
+_get_total_frames()
+_get_fps()
+_load_ground_truth()
+_get_subject()
+_get_task()
+```
+```
