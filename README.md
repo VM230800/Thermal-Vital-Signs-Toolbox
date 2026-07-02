@@ -35,42 +35,43 @@ python main.py
 ## Repository Structure
 
 ```text
-thermal_vital_signs/
 |
-|-- main.py                      <- Entry point
-|-- yolo.py                      <- YOLO wrapper (supervisor, do not modify)
+|-- main.py                      <- Pipeline orchestration
 |
 |-- configs/
-|   |-- run_config.yaml          <- Pipeline settings
 |   |-- bp4d.yaml                <- BP4D+ dataset paths
-|   +-- npz.yaml                 <- NPZ dataset paths
+|   |-- npz.yaml                 <- NPZ dataset paths
+|   +-- run_config.yaml          <- Pipeline settings
 |
 |-- data/
+|   |-- base_loader.py           <- Abstract BaseLoader with shared logic
 |   |-- bp4d_loader.py           <- BP4D+ loader (.wmv + .txt)
 |   +-- npz_loader.py            <- NPZ loader (.npz files)
 |
-|-- models/
-|   +-- YOLOv11_TFL_252.pt      <- Trained YOLO model (not in repo)
-|
-|-- preprocessing/
-|   |-- roi_extraction.py        <- Keypoints to ROI boxes
-|   |-- yolo_keypoints.py        <- 54 landmark definitions
-|   |-- signal_extraction.py     <- Frames + ROIs to temperature signal
-|   +-- peak_extraction.py       <- Signal to BPM (filter + FFT)
-|
-|-- methods/
-|   |-- thermal_mean.py          <- Baseline: mean ROI temperature
-|   |-- ica.py                   <- ICA-based source separation
-|   +-- garbey.py                <- Vessel-line FFT (Garbey 2007)
-|
 |-- evaluation/
-|   |-- metrics.py               <- MAE, RMSE, Pearson
 |   |-- bland_altman.py          <- Bland-Altman and scatter plots
+|   |-- metrics.py               <- MAE, RMSE, Pearson
 |   +-- results_table.py         <- Comparison table (CSV + PDF)
 |
-|-- utils/
-|   +-- yolo_processing.py       <- YOLO batch processing
+|-- methods/
+|   |-- garbey.py                <- line-FFT method (Garbey et al. 2007)
+|   |-- ica.py                   <- ICA-based source separation
+|   +-- thermal_mean.py          <- Baseline: mean ROI temperature
 |
-+-- results/                     <- Output (auto-created)
+|-- models/
+|   |-- YOLOv11_TFL_252.pt
+|   +-- run_yolo.py
+|
+|-- preprocessing/
+|   |-- peak_extraction.py       <- Bandpass filtering + BPM estimation
+|   |-- roi_extraction.py        <- Keypoints to ROI boxes
+|   |-- signal_extraction.py     <- Frames + ROIs to temperature signal
+|
+|-- results/
+|
++-- utils/
+    |-- visualization.py         <- ROI overlays
+    |-- yolo_keypoints.py        <- keypoint names and regions
+    +-- yolo_processing.py       <- YOLO batch processing
 ```
 
