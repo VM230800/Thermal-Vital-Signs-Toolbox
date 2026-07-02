@@ -76,8 +76,15 @@ Thermal Vital Signs Toolbox
 
 ## Configuration
 ```text
-Set the dataset root path, subject/task filters, fallback FPS and warm-up seconds in configs/bp4d.yaml and configs/npz.yaml.
-configs/run_configs.yaml determines which dataset to process, which methods are enabled and their parameters.
+Set in configs/bp4d.yaml and configs/npz.yaml:
+- dataset root path
+- subject/task filters
+- fallback FPS
+- warm-up seconds
+
+Set in configs/run_configs.yaml:
+- which dataset should be processed
+- which methods are enabled + their parameters.
 ```
 
 ---
@@ -126,43 +133,72 @@ methods/garbey.py does not use these ROIs as it defines its own line-segment geo
 
 ### Thermal Mean - methods/thermal_mean.py
 ```text
-...
+Mean temperature per ROI per frame -> bandpass filter -> FFT -> dominant frequency -> BPM
 ```
 
 ### ICA - methods/ica.py
 ```text
-...
+Extracts multi-ROI temperature signals -> detrends (Savitzky-Golay) -> bandpass-filters -> z-score normalises; then applies FastICA to separate mixed signals into independent components. The component with the strongest concentrated energy in the target frequency band is selected as the HR/RR signal.
 ```
 
 ### Garbey (2007) - methods/garbey.py
 ```text
-...
+Define a keypoint line -> sample points along the line -> mirror signal -> compute its FFT power spectrum -> average power spectrum -> find dominant frequency -> subharmonic correction
 ```
 
 ---
 
 ## Signal Processing
 ```text
-...
+Configured under "signal:" in run_config.yaml:
+ 
+  Parameter        | HR                  | RR
+  Bandpass low     | 0.7 Hz (~42 BPM)    | 0.1 Hz (~6 BPM)
+  Bandpass high    | 4.0 Hz (~240 BPM)   | 0.5 Hz (~30 BPM)
+  Filter order     | 4 (Butterworth)     | 4 (Butterworth)
 ```
 
 ---
 
 ## Evaluation
 ```text
-...
-```
-
----
-
-## Open Items
-```text
-...
+evaluation/metrics.py computes, per method/dataset/target:
+  - MAE (+ standard error)
+  - RMSE
+  - MAPE
+  - Pearson r
+  - n (valid sample count)
+ 
+evaluation/bland_altman.py produces:
+  - Scatter plots
+  - Classic Bland-Altman difference plots
+ 
+evaluation/results_table.py aggregates everything into:
+  - results/summary/results.csv
+  - results/summary/results_table.pdf (best MAE per Dataset x
+    Target highlighted)
+  - results/summary/per_sample_results.csv (raw per-recording
+    results, useful for outlier investigation)
 ```
 
 ---
 
 ## References
 ```text
-...
+ - Garbey, M., Sun, N., Merla, A., & Pavlidis, I. (2007).
+    Contact-Free Measurement of Cardiac Pulse Based on the
+    Analysis of Thermal Imagery. IEEE Transactions on Biomedical
+    Engineering, 54(8), 1418-1426.
+ 
+  - Gioia, F., Pura, F., Greco, A., Piga, D., Merla, A., &
+    Forgione, M. (2025). Contactless Estimation of Respiratory
+    Frequency Using 3D-CNN on Thermal Images. IEEE Journal of
+    Biomedical and Health Informatics, 29(10), 7387-7396.
+ 
+  - Tarmizi, S. S. A., Suriani, N. S., & Nor Rashid, F. A. (2022).
+    A Review of Facial Thermography Assessment for Vital Signs
+    Estimation. IEEE Access, 10, 115583-115602.
+ 
+  - Liu, X. et al. (2023). rPPG-Toolbox: Deep Remote PPG Toolbox.
+    NeurIPS 2023.
 ```
