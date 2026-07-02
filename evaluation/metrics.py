@@ -20,16 +20,7 @@ from evaluation.bland_altman import (
 # ═══════════════════════════════════════════════
 
 def compute_metrics(estimated, ground_truth):
-    """Compute all evaluation metrics.
-
-    Args:
-        estimated:    List/array of estimated BPM
-        ground_truth: List/array of ground-truth BPM
-
-    Returns:
-        Dictionary with MAE, MAE_SE, RMSE, MAPE,
-        Pearson, and n
-    """
+    """Compute all evaluation metrics."""
     est = np.asarray(estimated, dtype=float)
     gt  = np.asarray(ground_truth, dtype=float)
 
@@ -78,8 +69,7 @@ def print_metrics(metrics, label=""):
 
 def evaluate_algorithm(results, algo_name,
                        save_dir="results/"):
-    """Evaluate one algorithm – metrics only,
-    no plots."""
+    """Evaluate one algorithm – metrics only."""
     hr_est = np.array(
         [r["hr_estimated"] for r in results])
     hr_gt  = np.array(
@@ -115,8 +105,7 @@ def evaluate_all_and_plot(all_results, dataset_name,
                           save_dir="results/summary"):
     """
     Evaluate all methods for one dataset and create
-    combined Bland-Altman plots (all methods in one
-    figure).
+    combined Bland-Altman plots.
 
     Parameters
     ----------
@@ -139,7 +128,6 @@ def evaluate_all_and_plot(all_results, dataset_name,
     for method_name, results in \
             all_results.items():
 
-        # Filter for this dataset
         ds_results = [
             r for r in results
             if r.get("dataset") == dataset_name
@@ -147,12 +135,12 @@ def evaluate_all_and_plot(all_results, dataset_name,
         if not ds_results:
             continue
 
-        # ── Per-method metrics ──
+        # Per-method metrics
         eval_result = evaluate_algorithm(
             ds_results, method_name, save_dir)
         eval_results[method_name] = eval_result
 
-        # ── Collect valid pairs for plots ──
+        # Collect valid pairs for combined plots
         hr_gt = np.array(
             [r["hr_ground_truth"]
              for r in ds_results])
