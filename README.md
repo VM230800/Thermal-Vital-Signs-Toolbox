@@ -76,7 +76,8 @@ Thermal Vital Signs Toolbox
 
 ## Configuration
 ```text
-...
+Set the dataset root path, subject/task filters, fallback FPS and warm-up seconds in configs/bp4d.yaml and configs/npz.yaml.
+configs/run_configs.yaml determines which dataset to process, which methods are enabled and their parameters.
 ```
 
 ---
@@ -122,6 +123,18 @@ methods/garbey.py does not use these ROIs as it defines its own line-segment geo
 ---
 
 ## Implemented Methods
+
+### Thermal Mean - methods/thermal_mean.py
+```text
+...
+```
+
+### ICA - methods/ica.py
+```text
+...
+```
+
+### Garbey (2007) - methods/garbey.py
 ```text
 ...
 ```
