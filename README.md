@@ -28,10 +28,11 @@ pip install -r requirements.txt
 
 4. Run
 python main.py
+```
 
 ---
 
-### Repository Structure
+## Repository Structure
 
 ```text
 thermal_vital_signs/
