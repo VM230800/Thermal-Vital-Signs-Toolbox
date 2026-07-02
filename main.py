@@ -43,6 +43,7 @@ from methods.garbey import GarbeyMethod
 # ── Evaluation ──
 from evaluation.metrics import evaluate_algorithm
 from evaluation.results_table import ResultsTable
+from evaluation.bland_altman import BlandAltman
 
 # ── Visualisation ──
 from utils.visualization import (
@@ -707,6 +708,86 @@ def run_pipeline(config_path="configs/run_config.yaml"):
                        eval_result["hr"])
             table.add(ds_name, method_name, "RR",
                        eval_result["rr"])
+
+    # ── Bland-Altman Plots ──
+    summary_dir = os.path.join(save_dir, "summary")
+
+    for ds_entry in dataset_list:
+        ds_name = ds_entry["name"].upper()
+
+        for method_name, results in \
+                all_results.items():
+            ds_results = [
+                r for r in results
+                if r.get("dataset") == ds_name
+            ]
+            if len(ds_results) < 2:
+                continue
+
+            # ── HR ──
+            gt_hr  = [r["hr_ground_truth"]
+                      for r in ds_results]
+            est_hr = [r["hr_estimated"]
+                      for r in ds_results]
+
+            if not any(np.isnan(gt_hr)) and \
+               not any(np.isnan(est_hr)):
+                ba = BlandAltman(
+                    gold_std=gt_hr,
+                    new_measure=est_hr,
+                    save_path=summary_dir,
+                )
+                ba.difference_plot(
+                    the_title=(
+                        f"HR — {method_name} "
+                        f"on {ds_name}"),
+                    file_name=(
+                        f"bland_altman_{ds_name}_"
+                        f"{method_name}_HR.pdf"),
+                )
+                ba.scatter_plot(
+                    the_title=(
+                        f"HR — {method_name} "
+                        f"on {ds_name}"),
+                    file_name=(
+                        f"scatter_{ds_name}_"
+                        f"{method_name}_HR.pdf"),
+                    x_label="Ground Truth HR [BPM]",
+                    y_label="Estimated HR [BPM]",
+                )
+
+            # ── RR ──
+            gt_rr  = [r["rr_ground_truth"]
+                      for r in ds_results]
+            est_rr = [r["rr_estimated"]
+                      for r in ds_results]
+
+            if not any(np.isnan(gt_rr)) and \
+               not any(np.isnan(est_rr)):
+                ba_rr = BlandAltman(
+                    gold_std=gt_rr,
+                    new_measure=est_rr,
+                    save_path=summary_dir,
+                )
+                ba_rr.difference_plot(
+                    the_title=(
+                        f"RR — {method_name} "
+                        f"on {ds_name}"),
+                    file_name=(
+                        f"bland_altman_{ds_name}_"
+                        f"{method_name}_RR.pdf"),
+                )
+                ba_rr.scatter_plot(
+                    the_title=(
+                        f"RR — {method_name} "
+                        f"on {ds_name}"),
+                    file_name=(
+                        f"scatter_{ds_name}_"
+                        f"{method_name}_RR.pdf"),
+                    x_label="Ground Truth RR [BrPM]",
+                    y_label="Estimated RR [BrPM]",
+                )
+                   
 
     # ── Save results ──
     table.save_path = os.path.join(
