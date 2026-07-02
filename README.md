@@ -20,14 +20,17 @@ statistics (MAE, Bland-Altman, ...)
 1. Install dependencies
 pip install -r requirements.txt
 
-2. Place YOLO model
-  Copy YOLOv11_TFL_252.pt into models/
+2. Place the trained YOLO model at the path referenced in
+configs/run_config.yaml
 
 3. Configure dataset path
- Edit configs/bp4d.yaml or configs/npz.yaml
+Set the dataset root directories in configs/bp4d.yaml and configs/npz.yaml
 
-4. Run
+4. Run the pipeline
 python main.py
+
+The results are written to the directory configured under output.save_dir
+in run_config.yaml (default: results/).
 ```
 
 ---
