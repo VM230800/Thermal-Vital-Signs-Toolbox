@@ -1,16 +1,10 @@
 # Thermal Vital Signs Toolbox
 
-Contactless estimation of heart rate (HR) and respiration rate (RR)
-from thermal video using facial region analysis.
+Contactless estimation of heart rate (HR) and respiration rate (RR) from thermal video using facial region analysis.
 
-Developed as part of a university project, inspired by the architecture 
-of rPPG-Toolbox (Liu et al., NeurIPS 2023), adapted to the thermal 
-domain.
+Developed as part of a university project, inspired by the architecture of rPPG-Toolbox (Liu et al., NeurIPS 2023), adapted to the thermal domain.
 
-The toolbox loads recordings from multiple datasets, locates 54 anatomical
-keypoints with a YOLO model, extracts vital-sign estimates using independent
-methods and evaluates them against ground-truth measurements with standard 
-statistics (MAE, Bland-Altman, ...) 
+The toolbox loads recordings from multiple datasets, locates 54 anatomical keypoints with a YOLO model, extracts vital-sign estimates using independent methods and evaluates them against ground-truth measurements with standard statistics (MAE, Bland-Altman, ...) 
 
 ---
 
@@ -29,8 +23,7 @@ Set the dataset root directories in configs/bp4d.yaml and configs/npz.yaml
 4. Run the pipeline
 python main.py
 
-The results are written to the directory configured under output.save_dir
-in run_config.yaml (default: results/).
+The results are written to the directory configured under output.save_dir in run_config.yaml (default: results/).
 ```
 
 ---
@@ -99,8 +92,7 @@ Thermal Vital Signs Toolbox
    Frame rate: 30 fps
    Ground truth: Raw pulse/respiration waveforms
 
-Both datasets are accessed through a common BaseLoader interface, so a new
-dataset only needs to implement:
+Both datasets are accessed through a common BaseLoader interface, so a new dataset only needs to implement:
 _discover_samples()
 _load_frames()
 _load_single_frame()
@@ -115,19 +107,16 @@ _get_task()
 
 ## Face Detection
 ```text
-A already trained YOLO model detects the face and outputs 54 anatomical
-keypoints per frame:
+A already trained YOLO model detects the face and outputs 54 anatomical keypoints per frame:
 - Facial contour
 - Forehead
 - Nose
 - Eyes
 - Mouth
 
-From these keypoints, preprocessing/roi_extraction.py derives five
-ROIs used by thermal_mean and ica:
+From these keypoints, preprocessing/roi_extraction.py derives five ROIs used by thermal_mean and ica:
 Forehead, left and right cheek, nose, philtrum
-methods/garbey.py does not use these ROIs as it defines its own
-line-segment geometry between two keypoints.
+methods/garbey.py does not use these ROIs as it defines its own line-segment geometry between two keypoints.
 ```
 
 ---
