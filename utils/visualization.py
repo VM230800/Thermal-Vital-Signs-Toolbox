@@ -100,12 +100,12 @@ def _resample_to_match(signal, source_fps, target_fps,
 
 def save_roi_overlay(frame, keypoints, recording_id,
                      save_dir):
-    """Save one annotated frame as PNG."""
+    """Save one annotated frame as svg."""
     rec_dir = os.path.join(save_dir, recording_id)
     os.makedirs(rec_dir, exist_ok=True)
     vis = _draw_overlays(frame, keypoints, frame_idx=0)
     path = os.path.join(
-        rec_dir, f"{recording_id}_roi_overlay.png")
+        rec_dir, f"{recording_id}_roi_overlay.svg")
     cv2.imwrite(path, vis)
     print(f"  Saved: {path}")
 
@@ -275,7 +275,7 @@ def save_method_roi_overlay(frame, keypoints, method_name,
     # ── Save ──
     path = os.path.join(
         rec_dir,
-        f"{recording_id}_{method_name}_roi_overlay.png")
+        f"{recording_id}_{method_name}_roi_overlay.svg")
     cv2.imwrite(path, vis)
     print(f"  Saved: {path}")
 
@@ -354,7 +354,7 @@ def save_signal_plot(raw_signal, filtered_signal, fps,
     plt.tight_layout()
     path = os.path.join(
         rec_dir,
-        f"{recording_id}_{method_name}_{target}_signal.png",
+        f"{recording_id}_{method_name}_{target}_signal.svg",
     )
     plt.savefig(path, dpi=150, bbox_inches="tight")
     plt.close(fig)
@@ -503,7 +503,7 @@ def save_signal_comparison(predicted_signal, gt_signal, fps,
     os.makedirs(rec_dir, exist_ok=True)
 
     filename = (f"{recording_id}_{method_name}_"
-                f"{signal_type}_comparison.png")
+                f"{signal_type}_comparison.svg")
     filepath = os.path.join(rec_dir, filename)
     fig.savefig(filepath, dpi=150, bbox_inches="tight")
     plt.close(fig)
@@ -629,7 +629,7 @@ def save_gt_physiology_plot(physio_signals, predicted_signal,
     os.makedirs(rec_dir, exist_ok=True)
 
     filename = (f"{recording_id}_{method_name}_"
-                f"{signal_type}_physiology.png")
+                f"{signal_type}_physiology.svg")
     filepath = os.path.join(rec_dir, filename)
     fig.savefig(filepath, dpi=150, bbox_inches="tight")
     plt.close(fig)
