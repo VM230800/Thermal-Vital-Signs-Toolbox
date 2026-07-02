@@ -9,7 +9,7 @@ scipy>=1.10
 pandas>=2.0
 PyYAML>=6.0
 
-# YOLO face detection
+# YOLO face detection (pulls torch automatically)
 ultralytics>=8.0
 
 # ICA
@@ -20,3 +20,6 @@ opencv-python>=4.8
 
 # Plots and evaluation
 matplotlib>=3.7
+
+# PDF table export
+reportlab>=4.0
