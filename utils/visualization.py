@@ -100,13 +100,19 @@ def _resample_to_match(signal, source_fps, target_fps,
 
 def save_roi_overlay(frame, keypoints, recording_id,
                      save_dir):
-    """Save one annotated frame as svg."""
+    """Save one annotated frame as SVG."""
     rec_dir = os.path.join(save_dir, recording_id)
     os.makedirs(rec_dir, exist_ok=True)
     vis = _draw_overlays(frame, keypoints, frame_idx=0)
     path = os.path.join(
         rec_dir, f"{recording_id}_roi_overlay.svg")
-    cv2.imwrite(path, vis)
+
+    fig, ax = plt.subplots(figsize=(8, 6))
+    ax.imshow(cv2.cvtColor(vis, cv2.COLOR_BGR2RGB))
+    ax.axis("off")
+    fig.savefig(path, format="svg", bbox_inches="tight",
+                pad_inches=0)
+    plt.close(fig)
     print(f"  Saved: {path}")
 
 
@@ -272,13 +278,18 @@ def save_method_roi_overlay(frame, keypoints, method_name,
                         cv2.FONT_HERSHEY_SIMPLEX, 0.4,
                         (255, 255, 255), 1)
 
-    # ── Save ──
+    # ── Save ── (am Ende der Funktion)
     path = os.path.join(
         rec_dir,
         f"{recording_id}_{method_name}_roi_overlay.svg")
-    cv2.imwrite(path, vis)
-    print(f"  Saved: {path}")
 
+    fig, ax = plt.subplots(figsize=(8, 6))
+    ax.imshow(cv2.cvtColor(vis, cv2.COLOR_BGR2RGB))
+    ax.axis("off")
+    fig.savefig(path, format="svg", bbox_inches="tight",
+                pad_inches=0)
+    plt.close(fig)
+    print(f"  Saved: {path}")
 
 # ══════════════════════════════════════════════════════════
 # 2. Signal Analysis Plot (~150 KB)
