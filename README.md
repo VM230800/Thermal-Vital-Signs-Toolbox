@@ -80,7 +80,7 @@ Thermal Vital Signs Toolbox
 
 ## Configuration
 ```text
-
+...
 ```
 
 ---
@@ -131,33 +131,33 @@ line-segment geometry between two keypoints.
 
 ## Implemented Methods
 ```text
-
+...
 ```
 
 ---
 
 ## Signal Processing
 ```text
-
+...
 ```
 
 ---
 
 ## Evaluation
 ```text
-
+...
 ```
 
 ---
 
 ## Open Items
 ```text
-
+...
 ```
 
 ---
 
 ## References
 ```text
-
+...
 ```
