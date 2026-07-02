@@ -7,15 +7,17 @@ Computes agreement metrics between a ground-truth reference signal
 (e.g. contact ECG or respiratory belt) and a contactless estimate
 derived from thermal video.
 
-Two plot types are provided:
-    scatter_plot     -- estimated vs. ground-truth values
-    difference_plot  -- classic Bland-Altman: mean vs. difference
+Four plot types are provided:
+    scatter_plot              -- single method scatter
+    difference_plot           -- single method Bland-Altman
+    combined_scatter_plot     -- all methods in one scatter
+    combined_difference_plot  -- all methods in one Bland-Altman
 
-Both plots are saved as PDF files (vector format, publication-ready).
+All plots are saved as PDF files (vector format, publication-ready).
 
 Usage
 -----
-    from evaluation.bland_altman import BlandAltman
+    from evaluation.bland_altman import BlandAltman, combined_difference_plot
 
     ba = BlandAltman(
         gold_std    = [72.1, 68.4, 75.0, ...],
@@ -25,6 +27,17 @@ Usage
     ba.print_stats()
     ba.difference_plot(the_title="Heart Rate -- ICA method on BP4D+")
     ba.scatter_plot(the_title="Heart Rate -- ICA method on BP4D+")
+
+    # Combined plot for multiple methods:
+    combined_difference_plot(
+        methods_data = {
+            "thermal_mean": (gt_values, est_values),
+            "ica":          (gt_values, est_values),
+            "garbey":       (gt_values, est_values),
+        },
+        the_title = "Heart Rate – BP4D+",
+        save_path = "results/summary",
+    )
 """
 
 from __future__ import annotations
@@ -37,6 +50,20 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from scipy.stats import gaussian_kde
+
+
+# Method colours used across all combined plots
+METHOD_COLORS = {
+    "thermal_mean": "#2196F3",
+    "ica":          "#FF9800",
+    "garbey":       "#4CAF50",
+}
+
+METHOD_MARKERS = {
+    "thermal_mean": "o",
+    "ica":          "s",
+    "garbey":       "D",
+}
 
 
 class BlandAltman:
@@ -126,7 +153,7 @@ class BlandAltman:
         }
 
     # ------------------------------------------------------------------
-    # Plots
+    # Single-method plots
     # ------------------------------------------------------------------
 
     def scatter_plot(
@@ -141,10 +168,6 @@ class BlandAltman:
     ) -> None:
         """
         Scatter plot of estimate vs. ground-truth values.
-
-        Points are density-coloured and slightly jittered so
-        overlapping points remain visible. The ideal line of equality
-        (slope = 1) is drawn as a dashed reference.
         """
         if is_journal:
             matplotlib.rcParams["pdf.fonttype"] = 42
@@ -169,13 +192,13 @@ class BlandAltman:
                        edgecolors="black",
                        linewidths=0.5)
 
-        # Line of equality
         lim_min = min(gold_j.min(), new_j.min())
         lim_max = max(gold_j.max(), new_j.max())
         margin  = (lim_max - lim_min) * 0.05
-        eq_vals = np.array([lim_min - margin, lim_max + margin])
-        ax.plot(eq_vals, eq_vals, "--", color="black", linewidth=1,
-                label="Line of equality")
+        eq_vals = np.array(
+            [lim_min - margin, lim_max + margin])
+        ax.plot(eq_vals, eq_vals, "--", color="black",
+                linewidth=1, label="Line of equality")
 
         ax.set_xlim(eq_vals)
         ax.set_ylim(eq_vals)
@@ -186,8 +209,10 @@ class BlandAltman:
             ax.legend(fontsize=8)
         ax.grid(True, linewidth=0.4)
 
-        save_file = os.path.join(self.save_path, file_name)
-        plt.savefig(save_file, bbox_inches="tight", dpi=300)
+        save_file = os.path.join(
+            self.save_path, file_name)
+        plt.savefig(save_file, bbox_inches="tight",
+                    dpi=300)
         plt.close(fig)
         print(f"Saved: {save_file}")
 
@@ -203,13 +228,6 @@ class BlandAltman:
     ) -> None:
         """
         Classic Bland-Altman difference plot.
-
-        X-axis: mean of the two measurements.
-        Y-axis: difference (ground truth minus estimate).
-
-        Three horizontal reference lines are drawn:
-            solid black  : mean error (bias)
-            dashed black : +/- 95% limits of agreement
         """
         if is_journal:
             matplotlib.rcParams["pdf.fonttype"] = 42
@@ -234,12 +252,18 @@ class BlandAltman:
                        linewidths=0.5,
                        label="Observations")
 
-        ax.axhline(self.mean_error, color="black", linewidth=1.2,
-                   label=f"Mean error = {self.mean_error:.2f}")
-        ax.axhline(self.CI95[0], color="black", linestyle="--", linewidth=0.9,
-                   label=f"+95% LoA = {self.CI95[0]:.2f}")
-        ax.axhline(self.CI95[1], color="black", linestyle="--", linewidth=0.9,
-                   label=f"-95% LoA = {self.CI95[1]:.2f}")
+        ax.axhline(self.mean_error, color="black",
+                   linewidth=1.2,
+                   label=f"Mean error = "
+                         f"{self.mean_error:.2f}")
+        ax.axhline(self.CI95[0], color="black",
+                   linestyle="--", linewidth=0.9,
+                   label=f"+95% LoA = "
+                         f"{self.CI95[0]:.2f}")
+        ax.axhline(self.CI95[1], color="black",
+                   linestyle="--", linewidth=0.9,
+                   label=f"-95% LoA = "
+                         f"{self.CI95[1]:.2f}")
 
         ax.set_xlabel(x_label)
         ax.set_ylabel(y_label)
@@ -248,8 +272,10 @@ class BlandAltman:
         if show_legend:
             ax.legend(fontsize=8)
 
-        save_file = os.path.join(self.save_path, file_name)
-        plt.savefig(save_file, bbox_inches="tight", dpi=300)
+        save_file = os.path.join(
+            self.save_path, file_name)
+        plt.savefig(save_file, bbox_inches="tight",
+                    dpi=300)
         plt.close(fig)
         print(f"Saved: {save_file}")
 
@@ -259,26 +285,180 @@ class BlandAltman:
 
     @staticmethod
     def _to_series(data, name: str) -> pd.Series:
-        """Convert list, numpy array, or pandas Series to pandas Series."""
+        """Convert list, numpy array, or Series."""
         if isinstance(data, pd.Series):
             return data.reset_index(drop=True)
         if isinstance(data, (list, np.ndarray)):
-            return pd.Series(data, name=name, dtype=float)
+            return pd.Series(data, name=name,
+                             dtype=float)
         raise TypeError(
-            f"{name} must be a list, numpy array, or pandas Series, "
-            f"got {type(data)}."
+            f"{name} must be a list, numpy array, "
+            f"or pandas Series, got {type(data)}."
         )
 
     @staticmethod
     def _jitter(arr: pd.Series) -> pd.Series:
-        """
-        Add tiny random noise so overlapping points remain visible.
-        The noise magnitude is 1% of the data range.
-        """
+        """Add tiny random noise for visibility."""
         data_range = arr.max() - arr.min()
         if data_range == 0:
             return arr
-        return arr + np.random.randn(len(arr)) * 0.01 * data_range
+        return arr + np.random.randn(len(arr)) \
+            * 0.01 * data_range
+
+
+# ══════════════════════════════════════════════════════════
+# Combined plots – all methods in one figure
+# ══════════════════════════════════════════════════════════
+
+def combined_scatter_plot(
+    methods_data: dict,
+    the_title: str = "",
+    save_path: str = "results/summary",
+    file_name: str = "scatter_combined.pdf",
+    x_label: str   = "Ground Truth [BPM]",
+    y_label: str   = "Estimated [BPM]",
+    figure_size: tuple = (6, 6),
+) -> None:
+    """
+    Scatter plot with all methods in one figure.
+
+    Parameters
+    ----------
+    methods_data : dict
+        {method_name: (gt_array, est_array), ...}
+    """
+    os.makedirs(save_path, exist_ok=True)
+    fig, ax = plt.subplots(figsize=figure_size)
+
+    all_vals = []
+
+    for method_name, (gt, est) in methods_data.items():
+        gt  = np.asarray(gt, dtype=float)
+        est = np.asarray(est, dtype=float)
+
+        valid = ~(np.isnan(gt) | np.isnan(est))
+        gt, est = gt[valid], est[valid]
+
+        if len(gt) == 0:
+            continue
+
+        all_vals.extend(gt)
+        all_vals.extend(est)
+
+        color  = METHOD_COLORS.get(
+            method_name, "#999999")
+        marker = METHOD_MARKERS.get(
+            method_name, "o")
+
+        ax.scatter(gt, est, s=50, color=color,
+                   marker=marker,
+                   edgecolors="black",
+                   linewidths=0.5, alpha=0.8,
+                   label=method_name, zorder=3)
+
+    # Line of equality
+    if all_vals:
+        lim_min = min(all_vals)
+        lim_max = max(all_vals)
+        margin  = (lim_max - lim_min) * 0.08
+        eq_vals = np.array(
+            [lim_min - margin, lim_max + margin])
+        ax.plot(eq_vals, eq_vals, "--", color="black",
+                linewidth=1, label="Line of equality",
+                zorder=1)
+        ax.set_xlim(eq_vals)
+        ax.set_ylim(eq_vals)
+
+    ax.set_xlabel(x_label)
+    ax.set_ylabel(y_label)
+    ax.set_title(the_title)
+    ax.legend(fontsize=8, loc="upper left")
+    ax.grid(True, linewidth=0.4)
+
+    path = os.path.join(save_path, file_name)
+    plt.savefig(path, bbox_inches="tight", dpi=300)
+    plt.close(fig)
+    print(f"Saved: {path}")
+
+
+def combined_difference_plot(
+    methods_data: dict,
+    the_title: str = "",
+    save_path: str = "results/summary",
+    file_name: str = "bland_altman_combined.pdf",
+    x_label: str   = "Mean of GT and Estimate [BPM]",
+    y_label: str   = "Difference (GT - Estimate) [BPM]",
+    figure_size: tuple = (7, 5),
+) -> None:
+    """
+    Bland-Altman difference plot with all methods
+    in one figure. Each method gets its own colour,
+    marker, and LoA lines.
+
+    Parameters
+    ----------
+    methods_data : dict
+        {method_name: (gt_array, est_array), ...}
+    """
+    os.makedirs(save_path, exist_ok=True)
+    fig, ax = plt.subplots(figsize=figure_size)
+
+    for method_name, (gt, est) in methods_data.items():
+        gt  = np.asarray(gt, dtype=float)
+        est = np.asarray(est, dtype=float)
+
+        valid = ~(np.isnan(gt) | np.isnan(est))
+        gt, est = gt[valid], est[valid]
+
+        if len(gt) == 0:
+            continue
+
+        diffs = gt - est
+        avgs  = (gt + est) / 2.0
+        mean_err = float(diffs.mean())
+        std_err  = float(diffs.std())
+        upper = mean_err + 1.96 * std_err
+        lower = mean_err - 1.96 * std_err
+
+        color  = METHOD_COLORS.get(
+            method_name, "#999999")
+        marker = METHOD_MARKERS.get(
+            method_name, "o")
+
+        # Data points
+        ax.scatter(avgs, diffs, s=50, color=color,
+                   marker=marker,
+                   edgecolors="black",
+                   linewidths=0.5, alpha=0.8,
+                   label=f"{method_name} "
+                         f"(bias={mean_err:+.1f})",
+                   zorder=3)
+
+        # Mean error line
+        ax.axhline(mean_err, color=color,
+                   linewidth=1.2, zorder=2)
+
+        # LoA lines
+        ax.axhline(upper, color=color,
+                   linestyle="--", linewidth=0.8,
+                   alpha=0.6, zorder=2)
+        ax.axhline(lower, color=color,
+                   linestyle="--", linewidth=0.8,
+                   alpha=0.6, zorder=2)
+
+    ax.axhline(0, color="black", linewidth=0.5,
+               linestyle=":", zorder=1)
+
+    ax.set_xlabel(x_label)
+    ax.set_ylabel(y_label)
+    ax.set_title(the_title)
+    ax.legend(fontsize=8, loc="best")
+    ax.grid(True, linewidth=0.4)
+
+    path = os.path.join(save_path, file_name)
+    plt.savefig(path, bbox_inches="tight", dpi=300)
+    plt.close(fig)
+    print(f"Saved: {path}")
 
 
 # ---------------------------------------------------------------------------
@@ -288,21 +468,24 @@ class BlandAltman:
 if __name__ == "__main__":
     rng = np.random.default_rng(42)
     gt  = rng.normal(75, 10, 50)
-    est = gt + rng.normal(2, 5, 50)
 
-    ba = BlandAltman(
-        gold_std    = gt,
-        new_measure = est,
-        save_path   = "/Users/valeriamoltschanov/Desktop/bland_altman_test",
+    combined_difference_plot(
+        methods_data={
+            "thermal_mean": (gt, gt + rng.normal(2, 5, 50)),
+            "ica":          (gt, gt + rng.normal(-3, 8, 50)),
+            "garbey":       (gt, gt + rng.normal(1, 4, 50)),
+        },
+        the_title="Heart Rate – BP4D+",
+        save_path="/Users/valeriamoltschanov/Desktop/bland_altman_test",
+        file_name="hr_combined_difference.pdf",
     )
-    ba.print_stats()
-    ba.difference_plot(
-        the_title = "Heart Rate -- ICA method on BP4D+",
-        file_name = "hr_ica_difference.pdf",
-    )
-    ba.scatter_plot(
-        the_title = "Heart Rate -- ICA method on BP4D+",
-        file_name = "hr_ica_scatter.pdf",
-        x_label   = "Ground Truth HR [BPM]",
-        y_label   = "Estimated HR [BPM]",
+    combined_scatter_plot(
+        methods_data={
+            "thermal_mean": (gt, gt + rng.normal(2, 5, 50)),
+            "ica":          (gt, gt + rng.normal(-3, 8, 50)),
+            "garbey":       (gt, gt + rng.normal(1, 4, 50)),
+        },
+        the_title="Heart Rate – BP4D+",
+        save_path="/Users/valeriamoltschanov/Desktop/bland_altman_test",
+        file_name="hr_combined_scatter.pdf",
     )
