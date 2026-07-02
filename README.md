@@ -1,5 +1,3 @@
-# test_toolbox
-
 # Thermal Vital Signs Toolbox
 
 Contactless estimation of heart rate (HR) and respiration rate (RR)
@@ -19,16 +17,16 @@ statistics (MAE, Bland-Altman, ...)
 ## Quick Start
 
 ```bash
-# 1. Install dependencies
+1. Install dependencies
 pip install -r requirements.txt
 
-# 2. Place YOLO model
-#    Copy YOLOv11_TFL_252.pt into models/
+2. Place YOLO model
+  Copy YOLOv11_TFL_252.pt into models/
 
-# 3. Configure dataset path
-#    Edit configs/bp4d.yaml or configs/npz.yaml
+3. Configure dataset path
+ Edit configs/bp4d.yaml or configs/npz.yaml
 
-# 4. Run
+4. Run
 python main.py
 
 
