@@ -75,7 +75,15 @@ Thermal Vital Signs Toolbox
     |-- yolo_keypoints.py        <- keypoint names and regions
     +-- yolo_processing.py       <- YOLO batch processing
 ```
+
 --- 
+
+## Configuration
+```text
+
+```
+
+---
 
 ## Supported Datasets
 ```text
@@ -90,7 +98,6 @@ Thermal Vital Signs Toolbox
 
 Both datasets are accessed through a common BaseLoader interface, so a new
 dataset only needs to implement:
-```bash
 _discover_samples()
 _load_frames()
 _load_single_frame()
@@ -100,4 +107,57 @@ _load_ground_truth()
 _get_subject()
 _get_task()
 ```
+
+--- 
+
+## Face Detection
+```text
+A already trained YOLO model detects the face and outputs 54 anatomical
+keypoints per frame:
+- Facial contour
+- Forehead
+- Nose
+- Eyes
+- Mouth
+
+From these keypoints, preprocessing/roi_extraction.py derives five
+ROIs used by thermal_mean and ica:
+Forehead, left and right cheek, nose, philtrum
+methods/garbey.py does not use these ROIs as it defines its own
+line-segment geometry between two keypoints.
+```
+
+---
+
+## Implemented Methods
+```text
+
+```
+
+---
+
+## Signal Processing
+```text
+
+```
+
+---
+
+## Evaluation
+```text
+
+```
+
+---
+
+## Open Items
+```text
+
+```
+
+---
+
+## References
+```text
+
 ```
