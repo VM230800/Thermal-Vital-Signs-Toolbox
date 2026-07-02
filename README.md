@@ -5,7 +5,14 @@
 Contactless estimation of heart rate (HR) and respiration rate (RR)
 from thermal video using facial region analysis.
 
-Developed as part of a university project (Projektseminar, 4th semester).
+Developed as part of a university project, inspired by the architecture 
+of rPPG-Toolbox (Liu et al., NeurIPS 2023), adapted to the thermal 
+domain.
+
+The toolbox loads recordings from multiple datasets, locates 54 anatomical
+keypoints with a YOLO model, extracts vital-sign estimates using independent
+methods and evaluates them against ground-truth measurements with standard 
+statistics (MAE, Bland-Altman, ...) 
 
 ---
 
@@ -24,9 +31,8 @@ pip install -r requirements.txt
 # 4. Run
 python main.py
 
-## Project Structure
 
-## Project Structure
+### Repository Structure
 
 ```text
 thermal_vital_signs/
