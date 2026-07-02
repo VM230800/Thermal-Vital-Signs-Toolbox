@@ -16,7 +16,7 @@ statistics (MAE, Bland-Altman, ...)
 
 ## Quick Start
 
-```bash
+```text
 1. Install dependencies
 pip install -r requirements.txt
 
