@@ -9,7 +9,8 @@ Orchestrates the complete workflow:
     5. Run enabled methods (thermal_mean, ica, garbey)
     6. Visualisation (ROI overlay, signal plots, optional video)
     7. Evaluate against ground truth
-    8. Save results (CSV, plots, PDF table)
+    8. Combined Bland-Altman plots (all methods per dataset)
+    9. Save results (CSV, plots, PDF table)
 
 Supports two processing modes:
     - BP4D+: streaming (RAM-friendly, one frame at a time)
@@ -41,9 +42,8 @@ from methods.ica import ICAMethod
 from methods.garbey import GarbeyMethod
 
 # ── Evaluation ──
-from evaluation.metrics import evaluate_algorithm
+from evaluation.metrics import evaluate_all_and_plot
 from evaluation.results_table import ResultsTable
-from evaluation.bland_altman import BlandAltman
 
 # ── Visualisation ──
 from utils.visualization import (
@@ -93,7 +93,8 @@ def load_dataset(config, dataset_config):
         dataset = NPZDataset(
             root_dir=dataset_config["root_dir"],
             subjects=dataset_config.get("subjects"),
-            recordings=dataset_config.get("recordings"),
+            recordings=dataset_config.get(
+                "recordings"),
             warmup_seconds=dataset_config.get(
                 "warmup_seconds", 10),
             fps=dataset_config.get("fps", 30),
@@ -230,7 +231,8 @@ def run_methods(methods, cropped_frames, keypoints,
                     cropped_frames, keypoints, fps)
             else:
                 result = method.estimate(
-                    cropped_frames, rois_per_frame, fps)
+                    cropped_frames, rois_per_frame,
+                    fps)
 
             results[name] = result
             print(f"  {name}: "
@@ -296,7 +298,8 @@ def save_visualisations(config, sample, cropped,
 
     # ── 3. Determine GT signal source ──
     bp_waveform = sample.get("bp_waveform", None)
-    resp_waveform = sample.get("resp_waveform", None)
+    resp_waveform = sample.get(
+        "resp_waveform", None)
     physio_fps = sample.get("physio_fps", None)
 
     gt_pulse = sample.get("pulse_rate", None)
@@ -323,7 +326,8 @@ def save_visualisations(config, sample, cropped,
         rr_gt_fps = None
 
     # ── 4. Signal Comparison Plots ──
-    for method_name, result in sample_results.items():
+    for method_name, result in \
+            sample_results.items():
         if np.isnan(result.get(
                 "hr_bpm", float("nan"))):
             continue
@@ -359,7 +363,8 @@ def save_visualisations(config, sample, cropped,
                         predicted_signal=filtered,
                         gt_signal=hr_gt_signal,
                         fps=fps,
-                        predicted_bpm=result["hr_bpm"],
+                        predicted_bpm=result[
+                            "hr_bpm"],
                         gt_bpm=sample.get(
                             "hr_bpm", float("nan")),
                         signal_type="hr",
@@ -379,7 +384,8 @@ def save_visualisations(config, sample, cropped,
                     and len(rr_gt_signal) > 10
                     and not np.isnan(result.get(
                         "rr_bpm", float("nan")))):
-                bp_rr = config["signal"]["rr_bandpass"]
+                bp_rr = config["signal"][
+                    "rr_bandpass"]
                 try:
                     filtered_rr = bandpass_filter(
                         clean, fps,
@@ -391,7 +397,8 @@ def save_visualisations(config, sample, cropped,
                         predicted_signal=filtered_rr,
                         gt_signal=rr_gt_signal,
                         fps=fps,
-                        predicted_bpm=result["rr_bpm"],
+                        predicted_bpm=result[
+                            "rr_bpm"],
                         gt_bpm=sample.get(
                             "rr_bpm", float("nan")),
                         signal_type="rr",
@@ -407,7 +414,8 @@ def save_visualisations(config, sample, cropped,
                         f"    RR comparison: {e}")
 
             # ── Physiology Plots (BP4D+ only) ──
-            if bp_waveform is not None and physio_fps:
+            if bp_waveform is not None \
+                    and physio_fps:
                 try:
                     filtered = bandpass_filter(
                         clean, fps,
@@ -428,7 +436,8 @@ def save_visualisations(config, sample, cropped,
                         predicted_signal=filtered,
                         fps_video=fps,
                         fps_physio=physio_fps,
-                        predicted_bpm=result["hr_bpm"],
+                        predicted_bpm=result[
+                            "hr_bpm"],
                         gt_bpm=sample.get(
                             "hr_bpm", float("nan")),
                         signal_type="hr",
@@ -440,7 +449,8 @@ def save_visualisations(config, sample, cropped,
                     warnings.warn(
                         f"    HR physiology: {e}")
 
-            if resp_waveform is not None and physio_fps:
+            if resp_waveform is not None \
+                    and physio_fps:
                 try:
                     filtered_rr = bandpass_filter(
                         clean, fps,
@@ -461,7 +471,8 @@ def save_visualisations(config, sample, cropped,
                         predicted_signal=filtered_rr,
                         fps_video=fps,
                         fps_physio=physio_fps,
-                        predicted_bpm=result["rr_bpm"],
+                        predicted_bpm=result[
+                            "rr_bpm"],
                         gt_bpm=sample.get(
                             "rr_bpm", float("nan")),
                         signal_type="rr",
@@ -492,7 +503,8 @@ def collect_results(method_results, sample,
             "rr_bpm", float("nan")),
         "rr_ground_truth": sample.get(
             "rr_bpm", float("nan")),
-        "subject":         sample.get("subject", "?"),
+        "subject":         sample.get(
+            "subject", "?"),
         "task":            sample.get("task", "?"),
         "recording_id":    sample.get(
             "recording_id", "unknown"),
@@ -571,7 +583,8 @@ def run_pipeline(config_path="configs/run_config.yaml"):
             "max_frames", None)
         use_streaming = processing.get(
             "streaming", True)
-        frame_step = processing.get("frame_step", 1)
+        frame_step = processing.get(
+            "frame_step", 1)
 
         # ── Process each sample ──
         for idx in range(len(dataset)):
@@ -582,18 +595,17 @@ def run_pipeline(config_path="configs/run_config.yaml"):
 
             print(f"\n{'─' * 50}")
             print(f"  Sample {idx + 1}/"
-                  f"{len(dataset)}: {recording_id}")
-            print(f"  Frames: {meta['total_frames']}"
+                  f"{len(dataset)}: "
+                  f"{recording_id}")
+            print(f"  Frames: "
+                  f"{meta['total_frames']}"
                   f", FPS: {fps:.1f}")
             print(f"{'─' * 50}")
 
             # ── YOLO + ROIs ──
             try:
-                # NPZ: batch load (compressed,
-                #       streaming too slow)
-                # BP4D+: streaming (video files,
-                #         RAM-friendly)
-                if use_streaming and ds_name != "npz":
+                if use_streaming \
+                        and ds_name != "npz":
                     cropped, keypoints, rois = \
                         run_yolo_and_rois_streaming(
                             dataset, idx, ds_config,
@@ -603,7 +615,8 @@ def run_pipeline(config_path="configs/run_config.yaml"):
                     sample = dataset[idx]
                     frames = sample["frames"]
                     if max_frames:
-                        frames = frames[:max_frames]
+                        frames = \
+                            frames[:max_frames]
                     cropped, keypoints, rois = \
                         run_yolo_and_rois(
                             frames, ds_config)
@@ -635,25 +648,23 @@ def run_pipeline(config_path="configs/run_config.yaml"):
                     sample_results.items():
                 entry = collect_results(
                     result, meta, method_name)
-                entry["dataset"] = ds_name.upper()
+                entry["dataset"] = \
+                    ds_name.upper()
                 all_results[method_name].append(
                     entry)
 
                 if verbose:
-                    gt_hr = entry[
-                        "hr_ground_truth"]
-                    gt_rr = entry[
-                        "rr_ground_truth"]
-                    est_hr = entry[
-                        "hr_estimated"]
-                    est_rr = entry[
-                        "rr_estimated"]
                     print(
                         f"    {method_name}: "
-                        f"HR {est_hr:.1f} vs "
-                        f"{gt_hr:.1f}, "
-                        f"RR {est_rr:.1f} vs "
-                        f"{gt_rr:.1f}")
+                        f"HR "
+                        f"{entry['hr_estimated']:.1f}"
+                        f" vs "
+                        f"{entry['hr_ground_truth']:.1f}"
+                        f", RR "
+                        f"{entry['rr_estimated']:.1f}"
+                        f" vs "
+                        f"{entry['rr_ground_truth']:.1f}"
+                    )
 
             # ── Free RAM ──
             del cropped, keypoints, rois
@@ -667,131 +678,42 @@ def run_pipeline(config_path="configs/run_config.yaml"):
 
     # ── Per-Sample CSV ──
     all_rows = []
-    for method_name, results in all_results.items():
+    for method_name, results in \
+            all_results.items():
         for r in results:
             all_rows.append(r)
 
+    summary_dir = os.path.join(
+        save_dir, "summary")
+    os.makedirs(summary_dir, exist_ok=True)
+
     if all_rows:
         df = pd.DataFrame(all_rows)
-        summary_dir = os.path.join(
-            save_dir, "summary")
-        os.makedirs(summary_dir, exist_ok=True)
         sample_csv = os.path.join(
             summary_dir, "per_sample_results.csv")
         df.to_csv(sample_csv, index=False)
         print(f"Per-sample results: {sample_csv}")
 
-    # ── Evaluate per dataset ──
+    # ── Evaluate + combined Bland-Altman ──
     for ds_entry in dataset_list:
         ds_name = ds_entry["name"].upper()
 
-        for method_name, results in \
-                all_results.items():
-            ds_results = [
-                r for r in results
-                if r.get("dataset") == ds_name
-            ]
-            if not ds_results:
-                continue
+        print(f"\n{'─' * 50}")
+        print(f"  Evaluating: {ds_name}")
+        print(f"{'─' * 50}")
 
-            print(f"\nEvaluating: {ds_name} / "
-                  f"{method_name}")
+        eval_results = evaluate_all_and_plot(
+            all_results, ds_name, summary_dir)
 
-            eval_result = evaluate_algorithm(
-                ds_results,
-                algo_name=method_name,
-                save_dir=os.path.join(
-                    save_dir, "summary"),
-            )
-
+        for method_name, result in \
+                eval_results.items():
             table.add(ds_name, method_name, "HR",
-                       eval_result["hr"])
+                       result["hr"])
             table.add(ds_name, method_name, "RR",
-                       eval_result["rr"])
+                       result["rr"])
 
-    # ── Bland-Altman Plots ──
-    summary_dir = os.path.join(save_dir, "summary")
-
-    for ds_entry in dataset_list:
-        ds_name = ds_entry["name"].upper()
-
-        for method_name, results in \
-                all_results.items():
-            ds_results = [
-                r for r in results
-                if r.get("dataset") == ds_name
-            ]
-            if len(ds_results) < 2:
-                continue
-
-            # ── HR ──
-            gt_hr  = [r["hr_ground_truth"]
-                      for r in ds_results]
-            est_hr = [r["hr_estimated"]
-                      for r in ds_results]
-
-            if not any(np.isnan(gt_hr)) and \
-               not any(np.isnan(est_hr)):
-                ba = BlandAltman(
-                    gold_std=gt_hr,
-                    new_measure=est_hr,
-                    save_path=summary_dir,
-                )
-                ba.difference_plot(
-                    the_title=(
-                        f"HR — {method_name} "
-                        f"on {ds_name}"),
-                    file_name=(
-                        f"bland_altman_{ds_name}_"
-                        f"{method_name}_HR.pdf"),
-                )
-                ba.scatter_plot(
-                    the_title=(
-                        f"HR — {method_name} "
-                        f"on {ds_name}"),
-                    file_name=(
-                        f"scatter_{ds_name}_"
-                        f"{method_name}_HR.pdf"),
-                    x_label="Ground Truth HR [BPM]",
-                    y_label="Estimated HR [BPM]",
-                )
-
-            # ── RR ──
-            gt_rr  = [r["rr_ground_truth"]
-                      for r in ds_results]
-            est_rr = [r["rr_estimated"]
-                      for r in ds_results]
-
-            if not any(np.isnan(gt_rr)) and \
-               not any(np.isnan(est_rr)):
-                ba_rr = BlandAltman(
-                    gold_std=gt_rr,
-                    new_measure=est_rr,
-                    save_path=summary_dir,
-                )
-                ba_rr.difference_plot(
-                    the_title=(
-                        f"RR — {method_name} "
-                        f"on {ds_name}"),
-                    file_name=(
-                        f"bland_altman_{ds_name}_"
-                        f"{method_name}_RR.pdf"),
-                )
-                ba_rr.scatter_plot(
-                    the_title=(
-                        f"RR — {method_name} "
-                        f"on {ds_name}"),
-                    file_name=(
-                        f"scatter_{ds_name}_"
-                        f"{method_name}_RR.pdf"),
-                    x_label="Ground Truth RR [BrPM]",
-                    y_label="Estimated RR [BrPM]",
-                )
-                   
-
-    # ── Save results ──
-    table.save_path = os.path.join(
-        save_dir, "summary")
+    # ── Save results table ──
+    table.save_path = summary_dir
     table.print()
 
     if config.get("output", {}).get(
