@@ -1,47 +1,4 @@
- Dataset: BP4D
-════════════════════════════════════════════════════════════
-BP4DDataset: 1 recordings found
-Dataset: bp4d, 1 samples
-
-──────────────────────────────────────────────────
-  Sample 1/1: F001_T1
-  Frames: 1612, FPS: 25.0
-──────────────────────────────────────────────────
-[W NNPACK.cpp:64] Could not initialize NNPACK! Reason: Unsupported hardware.
-    Processed 50 frames...
-    Processed 100 frames...
-    Processed 150 frames...
-    Processed 200 frames...
-    Processed 250 frames...
-    Processed 300 frames...
-    Processed 350 frames...
-    Processed 400 frames...
-    Processed 450 frames...
-    Processed 500 frames...
-    Streaming complete: 500 frames, 500 with keypoints
-  Frame step: 2 (effective FPS: 12.5)
-  YOLO: 500/500 frames with keypoints
-  thermal_mean: HR=66.0, RR=18.0 BPM
-  ica: HR=65.3, RR=27.0 BPM
-  garbey: HR=45.8, RR=6.0 BPM
-  Saved: results/F001_T1/F001_T1_roi_overlay.png
-  Saved: results/F001_T1/F001_T1_thermal_mean_roi_overlay.png
-  Saved: results/F001_T1/F001_T1_ica_roi_overlay.png
-  Saved: results/F001_T1/F001_T1_garbey_roi_overlay.png
-    Saved: results/F001_T1/F001_T1_thermal_mean_hr_comparison.png
-    Saved: results/F001_T1/F001_T1_thermal_mean_rr_comparison.png
-    Saved: results/F001_T1/F001_T1_thermal_mean_hr_physiology.png
-    Saved: results/F001_T1/F001_T1_thermal_mean_rr_physiology.png
-    Saved: results/F001_T1/F001_T1_ica_hr_comparison.png
-    Saved: results/F001_T1/F001_T1_ica_rr_comparison.png
-    Saved: results/F001_T1/F001_T1_ica_hr_physiology.png
-    Saved: results/F001_T1/F001_T1_ica_rr_physiology.png
-    thermal_mean: HR 66.0 vs 95.9, RR 18.0 vs 16.5
-    ica: HR 65.3 vs 95.9, RR 27.0 vs 16.5
-    garbey: HR 45.8 vs 95.9, RR 6.0 vs 16.5
-
-════════════════════════════════════════════════════════════
-  Dataset: NPZ
+ Dataset: NPZ
 ════════════════════════════════════════════════════════════
 NPZDataset: 1 recordings found
 Dataset: npz, 1 samples
@@ -58,20 +15,15 @@ Dataset: npz, 1 samples
   warnings.warn(
   ica: HR=62.1, RR=25.2 BPM
   garbey: HR=63.0, RR=8.1 BPM
-  Saved: results/018_rec_0/018_rec_0_roi_overlay.png
-  Saved: results/018_rec_0/018_rec_0_thermal_mean_roi_overlay.png
-  Saved: results/018_rec_0/018_rec_0_ica_roi_overlay.png
-  Saved: results/018_rec_0/018_rec_0_garbey_roi_overlay.png
-    Saved: results/018_rec_0/018_rec_0_thermal_mean_hr_comparison.png
-    Saved: results/018_rec_0/018_rec_0_thermal_mean_rr_comparison.png
-    Saved: results/018_rec_0/018_rec_0_ica_hr_comparison.png
-    Saved: results/018_rec_0/018_rec_0_ica_rr_comparison.png
+/Users/valeriamoltschanov/Desktop/test_toolbox/main.py:630: UserWarning:   Visualisation failed: OpenCV(4.11.0) /Users/runner/work/opencv-python/opencv-python/opencv/modules/imgcodecs/src/loadsave.cpp:836: error: (-2:Unspecified error) could not find a writer for the specified extension in function 'imwrite_'
+
+  warnings.warn(
     thermal_mean: HR 61.2 vs 44.0, RR 10.8 vs 6.0
     ica: HR 62.1 vs 44.0, RR 25.2 vs 6.0
     garbey: HR 63.0 vs 44.0, RR 8.1 vs 6.0
 
 ============================================================
-  Processing complete in 1780.9s
+  Processing complete in 2074.7s
 ============================================================
 Per-sample results: results/summary/per_sample_results.csv
 
@@ -81,147 +33,52 @@ Evaluating: BP4D / thermal_mean
   thermal_mean – Heart Rate
 ==================================================
   HR
-    MAE     : 29.93 ± 0.00 BPM
-    RMSE    : 29.93 BPM
-    MAPE    : 31.2%
-    Pearson : nan
-    n       : 1
+    MAE     : 25.98 ± 2.79 BPM
+    RMSE    : 26.28 BPM
+    MAPE    : 27.7%
+    Pearson : -1.000
+    n       : 2
 
   thermal_mean – Respiration Rate
 ==================================================
   RR
-    MAE     : 1.46 ± 0.00 BPM
-    RMSE    : 1.46 BPM
-    MAPE    : 8.8%
-    Pearson : nan
-    n       : 1
+    MAE     : 2.15 ± 0.49 BPM
+    RMSE    : 2.25 BPM
+    MAPE    : 14.8%
+    Pearson : 1.000
+    n       : 2
+Traceback (most recent call last):
+  File "/usr/local/Caskroom/miniforge/base/envs/toolbox/lib/python3.12/site-packages/scipy/stats/_kde.py", line 236, in __init__
+    self.set_bandwidth(bw_method=bw_method)
+  File "/usr/local/Caskroom/miniforge/base/envs/toolbox/lib/python3.12/site-packages/scipy/stats/_kde.py", line 579, in set_bandwidth
+    self._compute_covariance()
+  File "/usr/local/Caskroom/miniforge/base/envs/toolbox/lib/python3.12/site-packages/scipy/stats/_kde.py", line 591, in _compute_covariance
+    self._data_cho_cov = linalg.cholesky(self._data_covariance,
+                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/Caskroom/miniforge/base/envs/toolbox/lib/python3.12/site-packages/scipy/_lib/_util.py", line 1181, in wrapper
+    return f(*arrays, *other_args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/Caskroom/miniforge/base/envs/toolbox/lib/python3.12/site-packages/scipy/linalg/_decomp_cholesky.py", line 106, in cholesky
+    c, lower = _cholesky(a, lower=lower, overwrite_a=overwrite_a, clean=True,
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/Caskroom/miniforge/base/envs/toolbox/lib/python3.12/site-packages/scipy/linalg/_decomp_cholesky.py", line 39, in _cholesky
+    raise LinAlgError(
+numpy.linalg.LinAlgError: 2-th leading minor of the array is not positive definite
 
-Evaluating: BP4D / ica
+The above exception was the direct cause of the following exception:
 
-==================================================
-  ica – Heart Rate
-==================================================
-  HR
-    MAE     : 30.68 ± 0.00 BPM
-    RMSE    : 30.68 BPM
-    MAPE    : 32.0%
-    Pearson : nan
-    n       : 1
-
-  ica – Respiration Rate
-==================================================
-  RR
-    MAE     : 10.46 ± 0.00 BPM
-    RMSE    : 10.46 BPM
-    MAPE    : 63.2%
-    Pearson : nan
-    n       : 1
-
-Evaluating: BP4D / garbey
-
-==================================================
-  garbey – Heart Rate
-==================================================
-  HR
-    MAE     : 50.18 ± 0.00 BPM
-    RMSE    : 50.18 BPM
-    MAPE    : 52.3%
-    Pearson : nan
-    n       : 1
-
-  garbey – Respiration Rate
-==================================================
-  RR
-    MAE     : 10.54 ± 0.00 BPM
-    RMSE    : 10.54 BPM
-    MAPE    : 63.7%
-    Pearson : nan
-    n       : 1
-
-Evaluating: NPZ / thermal_mean
-
-==================================================
-  thermal_mean – Heart Rate
-==================================================
-  HR
-    MAE     : 17.21 ± 0.00 BPM
-    RMSE    : 17.21 BPM
-    MAPE    : 39.1%
-    Pearson : nan
-    n       : 1
-
-  thermal_mean – Respiration Rate
-==================================================
-  RR
-    MAE     : 4.80 ± 0.00 BPM
-    RMSE    : 4.80 BPM
-    MAPE    : 80.0%
-    Pearson : nan
-    n       : 1
-
-Evaluating: NPZ / ica
-
-==================================================
-  ica – Heart Rate
-==================================================
-  HR
-    MAE     : 18.11 ± 0.00 BPM
-    RMSE    : 18.11 BPM
-    MAPE    : 41.1%
-    Pearson : nan
-    n       : 1
-
-  ica – Respiration Rate
-==================================================
-  RR
-    MAE     : 19.21 ± 0.00 BPM
-    RMSE    : 19.21 BPM
-    MAPE    : 320.0%
-    Pearson : nan
-    n       : 1
-
-Evaluating: NPZ / garbey
-
-==================================================
-  garbey – Heart Rate
-==================================================
-  HR
-    MAE     : 19.01 ± 0.00 BPM
-    RMSE    : 19.01 BPM
-    MAPE    : 43.2%
-    Pearson : nan
-    n       : 1
-
-  garbey – Respiration Rate
-==================================================
-  RR
-    MAE     : 2.10 ± 0.00 BPM
-    RMSE    : 2.10 BPM
-    MAPE    : 35.0%
-    Pearson : nan
-    n       : 1
-
-================================================================================
-  Evaluation Results
-================================================================================
-Dataset       Method Target  MAE [BPM]  ± SE   RMSE  MAPE [%]  Pearson r  n
-   BP4D       garbey     HR     50.179   0.0 50.179     52.31        NaN  1
-   BP4D          ica     HR     30.679   0.0 30.679     31.98        NaN  1
-   BP4D thermal_mean     HR     29.929   0.0 29.929     31.20        NaN  1
-    NPZ       garbey     HR     19.012   0.0 19.012     43.18        NaN  1
-    NPZ          ica     HR     18.111   0.0 18.111     41.14        NaN  1
-    NPZ thermal_mean     HR     17.211   0.0 17.211     39.09        NaN  1
-   BP4D       garbey     RR     10.543   0.0 10.543     63.73        NaN  1
-   BP4D          ica     RR     10.457   0.0 10.457     63.21        NaN  1
-   BP4D thermal_mean     RR      1.457   0.0  1.457      8.81        NaN  1
-    NPZ       garbey     RR      2.101   0.0  2.101     35.00        NaN  1
-    NPZ          ica     RR     19.212   0.0 19.212    320.00        NaN  1
-    NPZ thermal_mean     RR      4.803   0.0  4.803     80.00        NaN  1
-================================================================================
-
-CSV saved: results/summary/results.csv
-PDF saved: results/summary/results_table.pdf
-
-Results saved to: results/
-Done.
+Traceback (most recent call last):
+  File "/Users/valeriamoltschanov/Desktop/test_toolbox/main.py", line 824, in <module>
+    run_pipeline(args.config)
+  File "/Users/valeriamoltschanov/Desktop/test_toolbox/main.py", line 700, in run_pipeline
+    eval_result = evaluate_algorithm(
+                  ^^^^^^^^^^^^^^^^^^^
+  File "/Users/valeriamoltschanov/Desktop/test_toolbox/evaluation/metrics.py", line 102, in evaluate_algorithm
+    ba_hr.difference_plot(
+  File "/Users/valeriamoltschanov/Desktop/test_toolbox/evaluation/bland_altman.py", line 215, in difference_plot
+    z = gaussian_kde(np.vstack([avgs, diffs]))(np.vstack([avgs, diffs]))
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/Caskroom/miniforge/base/envs/toolbox/lib/python3.12/site-packages/scipy/stats/_kde.py", line 245, in __init__
+    raise linalg.LinAlgError(msg) from e
+numpy.linalg.LinAlgError: The data appears to lie in a lower-dimensional subspace of the space in which it is expressed. This has resulted in a singular data covariance matrix, which cannot be treated using the algorithms implemented in `gaussian_kde`. Consider performing principal component analysis / dimensionality reduction and using `gaussian_kde` with the transformed data.
 (toolbox) MacBook-Air-4:test_toolbox valeriamoltschanov$ 
