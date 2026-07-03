@@ -60,13 +60,6 @@ from utils.visualization import (
     save_gt_physiology_plot,
     save_roi_video,
 )
-from preprocessing.signal_extraction import (
-    extract_all_roi_signals,
-    interpolate_nan,
-)
-from preprocessing.peak_extraction import (
-    bandpass_filter,
-)
 
 
 # ─────────────────────────────────────────────────────────
@@ -275,6 +268,8 @@ def run_methods(
             results[name] = {
                 "hr_bpm": float("nan"),
                 "rr_bpm": float("nan"),
+                "hr_signal": None,
+                "rr_signal": None,
                 "method": name,
             }
 
@@ -319,17 +314,19 @@ def _resolve_gt_signals(sample, fps):
         rr_gt_signal = None
         rr_gt_fps = None
 
-    return hr_gt_signal, hr_gt_fps, rr_gt_signal, rr_gt_fps
+    return (hr_gt_signal, hr_gt_fps,
+            rr_gt_signal, rr_gt_fps)
 
 
 def _save_hr_comparison(
-    filtered, hr_gt_signal, fps, result,
+    hr_signal, hr_gt_signal, fps, result,
     sample, method_name, recording_id,
-    save_dir, bp, hr_gt_fps
+    save_dir, signal_config, hr_gt_fps
 ):
     """Save HR signal comparison plot."""
+    hr_bp = signal_config["hr_bandpass"]
     save_signal_comparison(
-        predicted_signal=filtered,
+        predicted_signal=hr_signal,
         gt_signal=hr_gt_signal,
         fps=fps,
         predicted_bpm=result["hr_bpm"],
@@ -338,19 +335,20 @@ def _save_hr_comparison(
         method_name=method_name,
         recording_id=recording_id,
         save_dir=save_dir,
-        bandpass=(bp["low"], bp["high"]),
+        bandpass=(hr_bp["low"], hr_bp["high"]),
         gt_fps=hr_gt_fps,
     )
 
 
 def _save_rr_comparison(
-    filtered_rr, rr_gt_signal, fps, result,
+    rr_signal, rr_gt_signal, fps, result,
     sample, method_name, recording_id,
-    save_dir, bp_rr, rr_gt_fps
+    save_dir, signal_config, rr_gt_fps
 ):
     """Save RR signal comparison plot."""
+    rr_bp = signal_config["rr_bandpass"]
     save_signal_comparison(
-        predicted_signal=filtered_rr,
+        predicted_signal=rr_signal,
         gt_signal=rr_gt_signal,
         fps=fps,
         predicted_bpm=result["rr_bpm"],
@@ -359,13 +357,13 @@ def _save_rr_comparison(
         method_name=method_name,
         recording_id=recording_id,
         save_dir=save_dir,
-        bandpass=(bp_rr["low"], bp_rr["high"]),
+        bandpass=(rr_bp["low"], rr_bp["high"]),
         gt_fps=rr_gt_fps,
     )
 
 
 def _save_physiology_hr(
-    clean, fps, config, sample, result,
+    hr_signal, fps, sample, result,
     method_name, recording_id, save_dir
 ):
     """Save HR physiology plot (BP4D+ only)."""
@@ -375,14 +373,6 @@ def _save_physiology_hr(
 
     if bp_wave is None or not physio_fps:
         return
-
-    hr_bp = config["signal"]["hr_bandpass"]
-    filtered = bandpass_filter(
-        clean, fps,
-        low=hr_bp["low"],
-        high=hr_bp["high"],
-        order=hr_bp["order"],
-    )
 
     rate_bpm = (
         gt_pulse if gt_pulse is not None
@@ -394,7 +384,7 @@ def _save_physiology_hr(
             "waveform": bp_wave,
             "rate_bpm": rate_bpm,
         },
-        predicted_signal=filtered,
+        predicted_signal=hr_signal,
         fps_video=fps,
         fps_physio=physio_fps,
         predicted_bpm=result["hr_bpm"],
@@ -407,7 +397,7 @@ def _save_physiology_hr(
 
 
 def _save_physiology_rr(
-    clean, fps, config, sample, result,
+    rr_signal, fps, sample, result,
     method_name, recording_id, save_dir
 ):
     """Save RR physiology plot (BP4D+ only)."""
@@ -417,14 +407,6 @@ def _save_physiology_rr(
 
     if resp_wave is None or not physio_fps:
         return
-
-    rr_bp = config["signal"]["rr_bandpass"]
-    filtered_rr = bandpass_filter(
-        clean, fps,
-        low=rr_bp["low"],
-        high=rr_bp["high"],
-        order=rr_bp["order"],
-    )
 
     rate_bpm = (
         gt_resp if gt_resp is not None
@@ -436,7 +418,7 @@ def _save_physiology_rr(
             "waveform": resp_wave,
             "rate_bpm": rate_bpm,
         },
-        predicted_signal=filtered_rr,
+        predicted_signal=rr_signal,
         fps_video=fps,
         fps_physio=physio_fps,
         predicted_bpm=result["rr_bpm"],
@@ -458,10 +440,13 @@ def save_visualisations(
 ):
     """
     Save diagnostic plots for one recording.
-    Handles both BP4D+ (with raw waveforms) and NPZ.
+
+    Uses hr_signal / rr_signal returned directly
+    by each method – no re-extraction needed.
     """
     output = config.get("output", {})
     save_dir = output.get("save_dir", "results/")
+    signal_config = config["signal"]
     recording_id = sample["recording_id"]
     fps = sample.get("fps", 25.0)
 
@@ -506,82 +491,57 @@ def save_visualisations(
         _resolve_gt_signals(sample, fps)
     )
 
-    # ── Signal Comparison Plots ──
+    # ── Signal Plots per Method ──
     for method_name, result in sample_results.items():
+
         hr_bpm = result.get("hr_bpm", float("nan"))
         if np.isnan(hr_bpm):
             continue
 
-        method_cfg = config["methods"].get(
-            method_name, {}
-        )
-        roi_names = method_cfg.get("rois", [])
-        if not roi_names:
-            continue
+        hr_signal = result.get("hr_signal", None)
+        rr_signal = result.get("rr_signal", None)
 
-        roi_signals = extract_all_roi_signals(
-            cropped, rois, roi_names
-        )
+        # ── HR comparison ──
+        if (hr_signal is not None
+                and hr_gt_signal is not None
+                and len(hr_gt_signal) > 10):
+            try:
+                _save_hr_comparison(
+                    hr_signal, hr_gt_signal,
+                    fps, result, sample,
+                    method_name, recording_id,
+                    save_dir, signal_config,
+                    hr_gt_fps,
+                )
+            except Exception as e:
+                warnings.warn(
+                    f"    HR comparison: {e}"
+                )
 
-        for roi_name, raw_signal in (
-            roi_signals.items()
-        ):
-            clean = interpolate_nan(raw_signal)
-            if np.isnan(clean).all():
-                continue
+        # ── RR comparison ──
+        rr_bpm = result.get("rr_bpm", float("nan"))
+        if (rr_signal is not None
+                and rr_gt_signal is not None
+                and len(rr_gt_signal) > 10
+                and not np.isnan(rr_bpm)):
+            try:
+                _save_rr_comparison(
+                    rr_signal, rr_gt_signal,
+                    fps, result, sample,
+                    method_name, recording_id,
+                    save_dir, signal_config,
+                    rr_gt_fps,
+                )
+            except Exception as e:
+                warnings.warn(
+                    f"    RR comparison: {e}"
+                )
 
-            # ── HR comparison ──
-            hr_bp = config["signal"]["hr_bandpass"]
-            if (hr_gt_signal is not None
-                    and len(hr_gt_signal) > 10):
-                try:
-                    filtered = bandpass_filter(
-                        clean, fps,
-                        low=hr_bp["low"],
-                        high=hr_bp["high"],
-                        order=hr_bp["order"],
-                    )
-                    _save_hr_comparison(
-                        filtered, hr_gt_signal,
-                        fps, result, sample,
-                        method_name, recording_id,
-                        save_dir, hr_bp, hr_gt_fps,
-                    )
-                except Exception as e:
-                    warnings.warn(
-                        f"    HR comparison: {e}"
-                    )
-
-            # ── RR comparison ──
-            rr_bp = config["signal"]["rr_bandpass"]
-            rr_bpm = result.get(
-                "rr_bpm", float("nan")
-            )
-            if (rr_gt_signal is not None
-                    and len(rr_gt_signal) > 10
-                    and not np.isnan(rr_bpm)):
-                try:
-                    filtered_rr = bandpass_filter(
-                        clean, fps,
-                        low=rr_bp["low"],
-                        high=rr_bp["high"],
-                        order=rr_bp["order"],
-                    )
-                    _save_rr_comparison(
-                        filtered_rr, rr_gt_signal,
-                        fps, result, sample,
-                        method_name, recording_id,
-                        save_dir, rr_bp, rr_gt_fps,
-                    )
-                except Exception as e:
-                    warnings.warn(
-                        f"    RR comparison: {e}"
-                    )
-
-            # ── Physiology (BP4D+ only) ──
+        # ── Physiology (BP4D+ only) ──
+        if hr_signal is not None:
             try:
                 _save_physiology_hr(
-                    clean, fps, config, sample,
+                    hr_signal, fps, sample,
                     result, method_name,
                     recording_id, save_dir,
                 )
@@ -590,9 +550,10 @@ def save_visualisations(
                     f"    HR physiology: {e}"
                 )
 
+        if rr_signal is not None:
             try:
                 _save_physiology_rr(
-                    clean, fps, config, sample,
+                    rr_signal, fps, sample,
                     result, method_name,
                     recording_id, save_dir,
                 )
@@ -601,7 +562,39 @@ def save_visualisations(
                     f"    RR physiology: {e}"
                 )
 
-            break  # Only first valid ROI
+
+# ─────────────────────────────────────────────────────────
+# Helper: GT-Daten laden ohne Frames
+# ─────────────────────────────────────────────────────────
+
+def _build_sample_info(
+    dataset, idx, meta, sample=None
+):
+    """
+    Build a sample dict with metadata + GT signals,
+    without keeping frames in memory.
+
+    - Batch mode:  extract GT fields from sample
+    - Streaming:   use dataset.get_ground_truth()
+    """
+    sample_info = dict(meta)
+
+    gt_keys = [
+        "bp_waveform", "resp_waveform",
+        "physio_fps", "pulse_rate", "resp_rate",
+        "hr_bpm", "rr_bpm",
+    ]
+
+    if sample is not None:
+        for key in gt_keys:
+            if key in sample:
+                sample_info[key] = sample[key]
+    else:
+        if hasattr(dataset, "get_ground_truth"):
+            gt = dataset.get_ground_truth(idx)
+            sample_info.update(gt)
+
+    return sample_info
 
 
 # ─────────────────────────────────────────────────────────
@@ -775,6 +768,11 @@ def run_pipeline(
                 gc.collect()
                 continue
 
+            # ── Build sample info with GT ──
+            sample_info = _build_sample_info(
+                dataset, idx, meta, sample
+            )
+
             # ── Run methods ──
             effective_fps = fps / frame_step
             sample_results = run_methods(
@@ -785,8 +783,8 @@ def run_pipeline(
             # ── Save visualisations ──
             try:
                 save_visualisations(
-                    ds_config, meta, cropped,
-                    keypoints, rois,
+                    ds_config, sample_info,
+                    cropped, keypoints, rois,
                     sample_results,
                 )
             except Exception as e:
@@ -799,7 +797,8 @@ def run_pipeline(
                 sample_results.items()
             ):
                 entry = collect_results(
-                    result, meta, method_name
+                    result, sample_info,
+                    method_name,
                 )
                 entry["dataset"] = ds_name.upper()
                 all_results[method_name].append(
@@ -821,7 +820,7 @@ def run_pipeline(
 
             # ── Free RAM ──
             del cropped, keypoints, rois
-            del sample_results
+            del sample_results, sample_info
             if sample is not None:
                 del sample
             gc.collect()
