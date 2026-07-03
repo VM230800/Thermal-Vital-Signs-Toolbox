@@ -214,84 +214,110 @@ class ICAMethod:
         self.signal_config = signal_config
 
     def estimate(self, frames, rois_per_frame, fps):
-        """
-        Run ICA estimation on one recording.
+    """
+    Run ICA estimation on one recording.
 
-        Args:
-            frames:         (N, H, W, 3) uint8
-            rois_per_frame: list of ROI dicts
-            fps:            float
+    Args:
+        frames:         (N, H, W, 3) uint8
+        rois_per_frame: list of ROI dicts
+        fps:            float
 
-        Returns:
-            dict with hr_bpm, rr_bpm, method
-        """
-        # ── 1. Extract ROI signals ──
-        roi_signals = extract_all_roi_signals(
-            frames, rois_per_frame, self.rois)
+    Returns:
+        dict with hr_bpm, rr_bpm, method,
+        hr_signal, rr_signal
+    """
+    # ── 1. Extract ROI signals ──
+    roi_signals = extract_all_roi_signals(
+        frames, rois_per_frame, self.rois
+    )
 
-        valid_count = sum(
-            1 for s in roi_signals.values()
-            if not np.isnan(s).all()
+    valid_count = sum(
+        1 for s in roi_signals.values()
+        if not np.isnan(s).all()
+    )
+    if valid_count < 2:
+        warnings.warn(
+            "ICA needs at least 2 valid "
+            "ROI signals."
         )
-        if valid_count < 2:
-            warnings.warn(
-                "ICA needs at least 2 valid ROI signals.")
-            return self._empty_result()
+        return self._empty_result()
 
-        # ── 2. Estimate HR ──
-        hr_bpm = float("nan")
+    # ── 2. Estimate HR ──
+    hr_bpm = float("nan")
+    hr_component = None
 
-        if self.target in ("hr", "both"):
-            hr_bp = self.signal_config["hr_bandpass"]
-            matrix_hr, names_hr = _preprocess_for_ica(
+    if self.target in ("hr", "both"):
+        hr_bp = self.signal_config["hr_bandpass"]
+        matrix_hr, names_hr = (
+            _preprocess_for_ica(
                 roi_signals, fps,
                 hr_bp["low"], hr_bp["high"],
             )
+        )
 
-            if (matrix_hr is not None
-                    and matrix_hr.shape[1] >= 2):
-                components_hr = _run_ica(
-                    matrix_hr, self.n_components)
-                hr_freq, hr_idx = \
-                    _select_best_component(
-                        components_hr, fps,
-                        hr_bp["low"], hr_bp["high"],
-                    )
-                if hr_freq > 0:
-                    hr_bpm = hr_freq * 60.0
+        if (matrix_hr is not None
+                and matrix_hr.shape[1] >= 2):
+            components_hr = _run_ica(
+                matrix_hr, self.n_components
+            )
+            hr_freq, hr_idx = (
+                _select_best_component(
+                    components_hr, fps,
+                    hr_bp["low"],
+                    hr_bp["high"],
+                )
+            )
+            if hr_freq > 0:
+                hr_bpm = hr_freq * 60.0
+                hr_component = (
+                    components_hr[:, hr_idx]
+                )
 
-        # ── 3. Estimate RR ──
-        rr_bpm = float("nan")
+    # ── 3. Estimate RR ──
+    rr_bpm = float("nan")
+    rr_component = None
 
-        if self.target in ("rr", "both"):
-            rr_bp = self.signal_config["rr_bandpass"]
-            matrix_rr, names_rr = _preprocess_for_ica(
+    if self.target in ("rr", "both"):
+        rr_bp = self.signal_config["rr_bandpass"]
+        matrix_rr, names_rr = (
+            _preprocess_for_ica(
                 roi_signals, fps,
                 rr_bp["low"], rr_bp["high"],
             )
+        )
 
-            if (matrix_rr is not None
-                    and matrix_rr.shape[1] >= 2):
-                components_rr = _run_ica(
-                    matrix_rr, self.n_components)
-                rr_freq, rr_idx = \
-                    _select_best_component(
-                        components_rr, fps,
-                        rr_bp["low"], rr_bp["high"],
-                    )
-                if rr_freq > 0:
-                    rr_bpm = rr_freq * 60.0
+        if (matrix_rr is not None
+                and matrix_rr.shape[1] >= 2):
+            components_rr = _run_ica(
+                matrix_rr, self.n_components
+            )
+            rr_freq, rr_idx = (
+                _select_best_component(
+                    components_rr, fps,
+                    rr_bp["low"],
+                    rr_bp["high"],
+                )
+            )
+            if rr_freq > 0:
+                rr_bpm = rr_freq * 60.0
+                rr_component = (
+                    components_rr[:, rr_idx]
+                )
 
-        return {
-            "hr_bpm": hr_bpm,
-            "rr_bpm": rr_bpm,
-            "method": "ica",
-        }
+    return {
+        "hr_bpm": hr_bpm,
+        "rr_bpm": rr_bpm,
+        "method": "ica",
+        "hr_signal": hr_component,
+        "rr_signal": rr_component,
+    }
 
-    @staticmethod
-    def _empty_result():
-        return {
-            "hr_bpm": float("nan"),
-            "rr_bpm": float("nan"),
-            "method": "ica",
-        }
+@staticmethod
+def _empty_result():
+    return {
+        "hr_bpm": float("nan"),
+        "rr_bpm": float("nan"),
+        "method": "ica",
+        "hr_signal": None,
+        "rr_signal": None,
+    }
