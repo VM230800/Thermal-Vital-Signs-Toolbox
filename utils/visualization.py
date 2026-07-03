@@ -712,10 +712,14 @@ def save_gt_physiology_plot(
     recording_id, save_dir,
 ):
     """
-    Plot raw ground truth physiology signal alongside
-    our predicted thermal signal.
+    Plot raw ground truth physiology waveform
+    alongside our predicted thermal signal.
+
+    2 panels:
+      1. GT waveform (high-res physio sensor)
+      2. Predicted signal (from thermal video)
     """
-    fig, axes = plt.subplots(3, 1, figsize=(14, 10))
+    fig, axes = plt.subplots(2, 1, figsize=(14, 8))
 
     unit = _vital_unit(signal_type)
     type_label = (
@@ -740,7 +744,6 @@ def save_gt_physiology_plot(
     )
 
     waveform = physio_signals["waveform"]
-    rate_bpm = physio_signals["rate_bpm"]
 
     video_duration = (
         len(predicted_signal) / fps_video
@@ -749,20 +752,17 @@ def save_gt_physiology_plot(
     n_physio = min(n_physio, len(waveform))
 
     waveform_clip = waveform[:n_physio]
-    rate_clip = rate_bpm[
-        :min(n_physio, len(rate_bpm))
-    ]
 
     time_physio = (
         np.arange(len(waveform_clip)) / fps_physio
-    )
-    time_rate = (
-        np.arange(len(rate_clip)) / fps_physio
     )
     time_video = (
         np.arange(len(predicted_signal)) / fps_video
     )
 
+    # ══════════════════════════════════════════
+    # Panel 1: GT Waveform
+    # ══════════════════════════════════════════
     ax1 = axes[0]
     ax1.plot(
         time_physio, waveform_clip,
@@ -791,6 +791,9 @@ def save_gt_physiology_plot(
             ),
         )
 
+    # ══════════════════════════════════════════
+    # Panel 2: Predicted Signal
+    # ══════════════════════════════════════════
     ax2 = axes[1]
 
     pred_norm = (
@@ -805,6 +808,7 @@ def save_gt_physiology_plot(
         time_video, pred_norm,
         color="blue", linewidth=0.8, alpha=0.8,
     )
+    ax2.set_xlabel("Time [s]")
     ax2.set_ylabel("Normalised Amplitude")
     ax2.set_title(
         f"Predicted Signal – {method_name} "
@@ -817,39 +821,10 @@ def save_gt_physiology_plot(
             0, min(5, video_duration)
         )
 
-    ax3 = axes[2]
-
-    rate_unit = _vital_unit(signal_type)
-    ax3.plot(
-        time_rate, rate_clip,
-        color="red", linewidth=0.8, alpha=0.7,
-        label=(
-            f"GT Rate "
-            f"(mean: {gt_bpm:.1f} {rate_unit})"
-        ),
-    )
-
-    ax3.axhline(
-        y=predicted_bpm, color="blue",
-        linestyle="--", linewidth=1.5,
-        label=(
-            f"Predicted: "
-            f"{predicted_bpm:.1f} {rate_unit}"
-        ),
-    )
-
-    ax3.set_xlabel("Time [s]")
-    ax3.set_ylabel(f"Rate [{rate_unit}]")
-    ax3.set_title(
-        f"{type_label} Rate over Time"
-    )
-    ax3.legend(loc="upper right")
-    ax3.grid(True, alpha=0.3)
-
-    ax3.text(
+    ax2.text(
         0.02, 0.95,
-        f"Error: {error:.1f} {rate_unit}",
-        transform=ax3.transAxes,
+        f"Error: {error:.1f} {unit}",
+        transform=ax2.transAxes,
         fontsize=12, fontweight="bold",
         color=(
             "green" if error < 5
