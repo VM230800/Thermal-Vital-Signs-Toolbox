@@ -1,6 +1,9 @@
-(toolbox) MacBook-Air-4:test_toolbox valeriamoltschanov$ python main.py --config configs/run_config.yaml
+(toolbox) MacBook-Air-4:test_toolbox valeriamoltschanov$ python test_quick.py
 Traceback (most recent call last):
-  File "/Users/valeriamoltschanov/Desktop/test_toolbox/main.py", line 45, in <module>
-    from evaluation.metrics import evaluate_all_and_plot
-ImportError: cannot import name 'evaluate_all_and_plot' from 'evaluation.metrics' (/Users/valeriamoltschanov/Desktop/test_toolbox/evaluation/metrics.py)
-(toolbox) MacBook-Air-4:test_toolbox valeriamoltschanov$ 
+  File "/Users/valeriamoltschanov/Desktop/test_toolbox/test_quick.py", line 15, in <module>
+    from methods.ica import ICAMethod
+  File "/Users/valeriamoltschanov/Desktop/test_toolbox/methods/ica.py", line 217
+    """
+    ^^^
+IndentationError: expected an indented block after function definition on line 216
+(toolbox) MacBook-Air-4:test_toolbox valeriamoltschanov$
