@@ -41,6 +41,10 @@ from utils.yolo_processing import (
     process_with_yolo_streaming,
 )
 from preprocessing.roi_extraction import compute_rois
+from preprocessing.hrv_analysis import (
+    compute_ibi,
+    compute_hrv_metrics,
+)
 
 # ── Methods ──
 from methods.thermal_mean import ThermalMeanMethod
@@ -59,6 +63,7 @@ from utils.visualization import (
     save_signal_comparison,
     save_gt_physiology_plot,
     save_roi_video,
+    save_hrv_plot,
 )
 
 
@@ -537,7 +542,7 @@ def save_visualisations(
                     f"    RR comparison: {e}"
                 )
 
-        # ── Physiology (BP4D+ only) ──
+        # ── Physiology HR (BP4D+ only) ──
         if hr_signal is not None:
             try:
                 _save_physiology_hr(
@@ -550,6 +555,7 @@ def save_visualisations(
                     f"    HR physiology: {e}"
                 )
 
+        # ── Physiology RR (BP4D+ only) ──
         if rr_signal is not None:
             try:
                 _save_physiology_rr(
@@ -562,39 +568,31 @@ def save_visualisations(
                     f"    RR physiology: {e}"
                 )
 
-
-# ─────────────────────────────────────────────────────────
-# Helper: GT-Daten laden ohne Frames
-# ─────────────────────────────────────────────────────────
-
-def _build_sample_info(
-    dataset, idx, meta, sample=None
-):
-    """
-    Build a sample dict with metadata + GT signals,
-    without keeping frames in memory.
-
-    - Batch mode:  extract GT fields from sample
-    - Streaming:   use dataset.get_ground_truth()
-    """
-    sample_info = dict(meta)
-
-    gt_keys = [
-        "bp_waveform", "resp_waveform",
-        "physio_fps", "pulse_rate", "resp_rate",
-        "hr_bpm", "rr_bpm",
-    ]
-
-    if sample is not None:
-        for key in gt_keys:
-            if key in sample:
-                sample_info[key] = sample[key]
-    else:
-        if hasattr(dataset, "get_ground_truth"):
-            gt = dataset.get_ground_truth(idx)
-            sample_info.update(gt)
-
-    return sample_info
+        # ── HRV Analysis ──
+        if hr_signal is not None:
+            try:
+                ibi_result = compute_ibi(
+                    hr_signal, fps
+                )
+                hrv_metrics = compute_hrv_metrics(
+                    ibi_result
+                )
+                save_hrv_plot(
+                    signal=hr_signal,
+                    fps=fps,
+                    ibi_result=ibi_result,
+                    hrv_metrics=hrv_metrics,
+                    method_name=method_name,
+                    recording_id=recording_id,
+                    save_dir=save_dir,
+                    gt_bpm=sample.get(
+                        "hr_bpm", None
+                    ),
+                )
+            except Exception as e:
+                warnings.warn(
+                    f"    HRV analysis: {e}"
+                )
 
 
 # ─────────────────────────────────────────────────────────
@@ -768,11 +766,6 @@ def run_pipeline(
                 gc.collect()
                 continue
 
-            # ── Build sample info with GT ──
-            sample_info = _build_sample_info(
-                dataset, idx, meta, sample
-            )
-
             # ── Run methods ──
             effective_fps = fps / frame_step
             sample_results = run_methods(
@@ -783,7 +776,7 @@ def run_pipeline(
             # ── Save visualisations ──
             try:
                 save_visualisations(
-                    ds_config, sample_info,
+                    ds_config, meta,
                     cropped, keypoints, rois,
                     sample_results,
                 )
@@ -797,7 +790,7 @@ def run_pipeline(
                 sample_results.items()
             ):
                 entry = collect_results(
-                    result, sample_info,
+                    result, meta,
                     method_name,
                 )
                 entry["dataset"] = ds_name.upper()
@@ -820,7 +813,7 @@ def run_pipeline(
 
             # ── Free RAM ──
             del cropped, keypoints, rois
-            del sample_results, sample_info
+            del sample_results
             if sample is not None:
                 del sample
             gc.collect()
