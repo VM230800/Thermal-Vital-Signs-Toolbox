@@ -1,6 +1,6 @@
 """ 
 utils/yolo_keypoints.py
-=======================
+
 Facial keypoint and region definitions for YOLO-based landmark detection.
 
 Contains:
@@ -107,14 +107,11 @@ yolo_regions = {
     "face_full": list(range(54)),
 }
 
-# ---------------------------------------------------------------------------
-# Helper functions
-# ---------------------------------------------------------------------------
+
+# --- Helper functions ---
 
 def get_keypoint_index(name: str) -> int:
-    """
-    Returns the 0-based index of a keypoint given its name.
-    """
+    """ Returns the 0-based index of a keypoint given its name."""
     for idx, label in yolo_keypoint_names.items():
         if label == name:
             return idx
@@ -125,9 +122,7 @@ def get_keypoint_index(name: str) -> int:
 
 
 def get_keypoints_by_region(region: str) -> list[int]:
-    """
-    Returns all 0-based keypoint indices for an anatomical region.
-    """
+    """ Returns all 0-based keypoint indices for an anatomical region. """
     if region not in yolo_regions:
         raise ValueError(
             f"Region '{region}' not found. "
@@ -137,9 +132,7 @@ def get_keypoints_by_region(region: str) -> list[int]:
 
 
 def get_keypoint_name(index: int) -> str:
-    """
-    Returns the anatomical name of a keypoint given its index.
-    """
+    """ Returns the anatomical name of a keypoint given its index. """
     if index not in yolo_keypoint_names:
         raise ValueError(f"Index {index} is out of valid range (0–53).")
     return yolo_keypoint_names[index]
