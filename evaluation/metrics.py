@@ -1,6 +1,6 @@
 """
 evaluation/metrics.py
-=====================
+
 Evaluation metrics for HR and RR.
 
 Provides per-method metrics and combined Bland-Altman
@@ -15,12 +15,14 @@ from evaluation.bland_altman import (
 )
 
 
-# ═══════════════════════════════════════════════
+
 # Compute evaluation metrics
-# ═══════════════════════════════════════════════
+
 
 def compute_metrics(estimated, ground_truth):
-    """Compute all evaluation metrics."""
+    """
+    Compute all evaluation metrics.
+    """
     est = np.asarray(estimated, dtype=float)
     gt  = np.asarray(ground_truth, dtype=float)
 
@@ -53,7 +55,9 @@ def compute_metrics(estimated, ground_truth):
 
 
 def print_metrics(metrics, label=""):
-    """Print evaluation metrics."""
+    """
+    Print evaluation metrics.
+    """
     print(f"  {label}")
     print(f"    MAE     : {metrics['MAE']:.2f} "
           f"± {metrics['MAE_SE']:.2f} BPM")
@@ -63,13 +67,15 @@ def print_metrics(metrics, label=""):
     print(f"    n       : {metrics['n']}")
 
 
-# ═══════════════════════════════════════════════
+
 # Evaluate a single algorithm (metrics only)
-# ═══════════════════════════════════════════════
+
 
 def evaluate_algorithm(results, algo_name,
                        save_dir="results/"):
-    """Evaluate one algorithm – metrics only."""
+    """
+    Evaluate one algorithm – metrics only.
+    """
     hr_est = np.array(
         [r["hr_estimated"] for r in results])
     hr_gt  = np.array(
@@ -97,9 +103,9 @@ def evaluate_algorithm(results, algo_name,
     }
 
 
-# ═══════════════════════════════════════════════
+
 # Evaluate all methods + combined Bland-Altman
-# ═══════════════════════════════════════════════
+
 
 def evaluate_all_and_plot(all_results, dataset_name,
                           save_dir="results/summary"):
@@ -171,7 +177,7 @@ def evaluate_all_and_plot(all_results, dataset_name,
                 rr_est[valid_rr],
             )
 
-    # ── Combined HR plots ──
+    # Combined HR plots 
     if hr_data:
         combined_difference_plot(
             methods_data=hr_data,
@@ -198,7 +204,7 @@ def evaluate_all_and_plot(all_results, dataset_name,
             y_label="Estimated HR [BPM]",
         )
 
-    # ── Combined RR plots ──
+    # Combined RR plots 
     if rr_data:
         combined_difference_plot(
             methods_data=rr_data,
