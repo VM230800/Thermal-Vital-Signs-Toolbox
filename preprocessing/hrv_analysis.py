@@ -12,8 +12,8 @@ import numpy as np
 from scipy.signal import find_peaks
 
 
-def extract_ibis(signal, fps, min_bpm=40,
-                 max_bpm=180):
+def compute_ibi(signal, fps, min_bpm=40,
+                max_bpm=180):
     """
     Extract Inter-Beat Intervals from a
     filtered cardiac signal.
@@ -33,8 +33,6 @@ def extract_ibis(signal, fps, min_bpm=40,
     """
     # Min/max distance between peaks
     min_dist = int(fps * 60.0 / max_bpm)
-    max_dist = int(fps * 60.0 / min_bpm)
-
     min_dist = max(min_dist, 1)
 
     # Find peaks
@@ -71,17 +69,29 @@ def extract_ibis(signal, fps, min_bpm=40,
     }
 
 
-def compute_hrv_metrics(ibis_ms):
+# Alias for backwards compatibility
+extract_ibis = compute_ibi
+
+
+def compute_hrv_metrics(ibi_input):
     """
     Compute standard HRV time-domain metrics.
 
     Args:
-        ibis_ms: np.ndarray, IBIs in milliseconds
+        ibi_input: dict (from compute_ibi) OR
+                   np.ndarray of IBIs in ms
 
     Returns:
         dict with HRV metrics (or NaN if too
         few beats)
     """
+    # Accept both dict and raw array
+    if isinstance(ibi_input, dict):
+        ibis_ms = ibi_input.get(
+            "ibis_ms", np.array([]))
+    else:
+        ibis_ms = np.asarray(ibi_input)
+
     if len(ibis_ms) < 3:
         return {
             "mean_ibi_ms": float("nan"),
