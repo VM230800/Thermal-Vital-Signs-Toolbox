@@ -1,6 +1,6 @@
 """
 data/npz_loader.py
-==================
+
 NPZ thermal dataset loader. Inherits from BaseLoader.
 Only implements NPZ-specific logic.
 
@@ -34,9 +34,9 @@ class NPZDataset(BaseLoader):
             force_preprocess=force_preprocess,
         )
 
-    # ─────────────────────────────────────────────────────
+    
     # NPZ cache – metadata and frames separate
-    # ─────────────────────────────────────────────────────
+    
 
     def _get_npz_data(self, npz_path):
         """
@@ -72,7 +72,9 @@ class NPZDataset(BaseLoader):
         return self._npz_cache[cache_key]
 
     def _clear_cache(self, npz_path=None):
-        """Free cached NPZ data to release RAM."""
+        """
+        Free cached NPZ data to release RAM.
+        """
         if npz_path is None:
             self._npz_cache.clear()
         else:
@@ -81,9 +83,9 @@ class NPZDataset(BaseLoader):
             for k in keys:
                 del self._npz_cache[k]
 
-    # ─────────────────────────────────────────────────────
+    
     # NPZ-specific implementations
-    # ─────────────────────────────────────────────────────
+    
 
     def _discover_samples(self, subjects):
         """Find all (subject, rec_id, path) combos."""
@@ -120,7 +122,9 @@ class NPZDataset(BaseLoader):
         return samples
 
     def _load_frames(self, sample_info):
-        """Load all frames from NPZ file."""
+        """
+        Load all frames from NPZ file.
+        """
         subj, rec_id, npz_path = sample_info
         frames = self._get_frames_array(npz_path)
         result = frames.astype(np.float16)
@@ -137,13 +141,17 @@ class NPZDataset(BaseLoader):
         return frames[frame_idx].astype(np.float16)
 
     def _get_total_frames(self, sample_info):
-        """Get frame count without loading frames."""
+        """
+        Get frame count without loading frames.
+        """
         subj, rec_id, npz_path = sample_info
         data = self._get_npz_data(npz_path)
         return data["_shape"][0]
 
     def _get_fps(self, sample_info):
-        """Compute FPS from timestamps."""
+        """
+        Compute FPS from timestamps.
+        """
         subj, rec_id, npz_path = sample_info
         data = self._get_npz_data(npz_path)
         timestamps = data["array2"]
@@ -162,7 +170,9 @@ class NPZDataset(BaseLoader):
             return 1.0 / median_diff
 
     def _load_ground_truth(self, sample_info, fps):
-        """Compute HR/RR from raw physiological signals."""
+        """
+        Compute HR/RR from raw physiological signals.
+        """
         subj, rec_id, npz_path = sample_info
         data = self._get_npz_data(npz_path)
 
@@ -193,14 +203,16 @@ class NPZDataset(BaseLoader):
     def _get_task(self, sample_info):
         return f"rec_{sample_info[1]}"
 
-    # ─────────────────────────────────────────────────────
+    
     # NPZ-specific helper methods
-    # ─────────────────────────────────────────────────────
+    
 
     @staticmethod
     def _compute_bpm_from_fft(signal, fps,
                                freq_range=(0.7, 3.5)):
-        """Compute BPM from raw signal using FFT."""
+        """
+        Compute BPM from raw signal using FFT.
+        """
         try:
             if len(signal) < 10:
                 return float("nan")
@@ -231,7 +243,9 @@ class NPZDataset(BaseLoader):
 
     @staticmethod
     def _sort_key(path):
-        """Sort npz filenames by numeric ID."""
+        """
+        Sort npz filenames by numeric ID.
+        """
         fname = os.path.splitext(
             os.path.basename(path))[0]
         try:
