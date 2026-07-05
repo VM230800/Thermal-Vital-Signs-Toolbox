@@ -11,7 +11,7 @@ Method:
 7. Subharmonic correction
 
 Reference: 
-Garbey M., Sun N., Merla A. & Pavlidis I. (2007). Contract-Free Measurement of Cardiac Pulse Based on the Analysis of Thermal Imagery. IEEE Transactions on Biomedical Engineering, 54(8), 1418-1426.
+Garbey M. et al. (2007): "Contract-Free Measurement of Cardiac Pulse Based on the Analysis of Thermal Imagery"
 """
 
 import warnings
