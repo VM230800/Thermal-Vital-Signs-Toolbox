@@ -5,8 +5,8 @@ Method:
 3. Selects component with the strongest periodic signal
 
 References:
-    - Poh et al. (2010): "Non-contact, automated cardiac pulse measurements using video imaging and blind source separation"
-    - Adapted from rPPG (visible light) to thermal imaging
+- Poh et al. (2010): "Non-contact, automated cardiac pulse measurements using video imaging and blind source separation"
+- Adapted from rPPG (visible light) to thermal imaging
 """
 
 import warnings
