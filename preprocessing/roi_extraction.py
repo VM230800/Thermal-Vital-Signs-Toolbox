@@ -1,14 +1,12 @@
 """
-preprocessing/roi_extraction.py
-================================
-Computes 5 ROI boxes from YOLO keypoints (54-point model).
-Used by ICAMethod and ThermalMeanMethod (Garbey works directly with the keypoints and defines its own line geometry, see methods/garbey.py).
+Computes 5 ROI boxes from YOLO keypoints (54-point model)
+Used by ICAMethod and ThermalMeanMethod (Garbey uses its own line-based approach, see methods/garbey.py)
 """
 
 import numpy as np
 
 from utils.yolo_keypoints import get_keypoint_index
-
+# mapping from named facial points to YOLO keypoints indices
 ROI_CONFIG = {
     "forehead_inner_left":  get_keypoint_index("forehead_left_22"),       # Index 21
     "forehead_inner_right": get_keypoint_index("forehead_right_23"),      # Index 22
@@ -25,24 +23,21 @@ ROI_CONFIG = {
 
 
 def compute_rois(keypoints, dataset_name=None):
-    """Computes 5 ROI boxes for a frame.
-
-    Args:
-        keypoints: (54, 2) Array – from YOLO-Modell
-        
-    Returns:
-        dict: ROI-Name -> (center_x, center_y, radius)
+    """
+    Computes 5 ROI boxes for a frame
     """
     idx = ROI_CONFIG
     kp = keypoints
 
-    # Eye distance as scale reference
+    # use eye distance as scale reference
     eye_dist = np.linalg.norm(
         kp[idx["left_eye_outer"]] - kp[idx["right_eye_outer"]]
     )
+    # fallback if detection is unstable
     if eye_dist < 15:
         eye_dist = 50.0
 
+    # define ROI sizes depending on face scale
     r_large = max(4, int(0.12 * eye_dist))
     r_small = max(3, int(0.08 * eye_dist))
 
