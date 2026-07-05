@@ -2,7 +2,7 @@
 import os
 import numpy as np
 import yaml
-from scipy.signal import resample
+from scipy.signal import resample, find_peaks
 
 from data.bp4d_loader import BP4DDataset
 from utils.yolo_processing import process_with_yolo
@@ -26,6 +26,7 @@ from utils.visualization import (
 # ══════════════════════════════════════════════════
 SUBJECT = "F004"
 TASK = "T1"
+N_FRAMES = 500  # 100=4s, 500=20s, 1500=60s
 # ══════════════════════════════════════════════════
 
 # ── Load config ──
@@ -55,7 +56,7 @@ print(f"RR GT: {meta['rr_bpm']:.1f} BPM")
 # ── Load sample ──
 sample = dataset[0]
 
-frames = sample["frames"][:100]
+frames = sample["frames"][:N_FRAMES]
 fps = sample["fps"]
 recording_id = sample.get(
     "recording_id", f"{SUBJECT}_{TASK}")
@@ -161,15 +162,202 @@ print(f"   HR: {r3['hr_bpm']:.1f} (GT: {gt_hr:.1f}, "
       f"Error: {abs(r3['hr_bpm'] - gt_hr):.1f})")
 print(f"   RR: {r3['rr_bpm']:.1f} (GT: {gt_rr:.1f})")
 
-# ── Signal Plots ──
-print(f"\n{'─' * 50}")
-print("Generating plots...")
+# ══════════════════════════════════════════════════
+#  HRV-Analyse
+# ══════════════════════════════════════════════════
+print(f"\n{'═' * 50}")
+print("  HRV-ANALYSE")
+print(f"{'═' * 50}")
+
+duration_s = len(frames) / fps
+if duration_s < 10:
+    print(f"  ⚠ Nur {duration_s:.1f}s – HRV wenig "
+          f"aussagekräftig (min. 20s empfohlen)")
+
+
+def compute_hrv(signal, fps, method_name):
+    """Compute time-domain HRV metrics from HR signal."""
+    # Bandpass filtern
+    bp = config["signal"]["hr_bandpass"]
+    filtered = bandpass_filter(
+        signal, fps,
+        low=bp["low"], high=bp["high"],
+        order=bp["order"],
+    )
+
+    # Peaks finden
+    min_distance = int(fps * 60 / 180)  # max 180 BPM
+    peaks, _ = find_peaks(
+        filtered,
+        distance=max(min_distance, 1),
+        height=np.std(filtered) * 0.3,
+    )
+
+    if len(peaks) < 3:
+        return None
+
+    # IBI (Inter-Beat-Intervalle) in ms
+    ibi_ms = np.diff(peaks) / fps * 1000.0
+
+    # Time-domain HRV
+    mean_ibi = np.mean(ibi_ms)
+    sdnn = np.std(ibi_ms, ddof=1)
+    rmssd = np.sqrt(np.mean(np.diff(ibi_ms) ** 2))
+
+    nn_diffs = np.abs(np.diff(ibi_ms))
+    pnn50 = (
+        np.sum(nn_diffs > 50) / len(nn_diffs) * 100
+        if len(nn_diffs) > 0 else 0.0
+    )
+
+    return {
+        "filtered": filtered,
+        "peaks": peaks,
+        "ibi_ms": ibi_ms,
+        "n_peaks": len(peaks),
+        "mean_ibi_ms": mean_ibi,
+        "mean_hr_bpm": 60000.0 / mean_ibi,
+        "sdnn_ms": sdnn,
+        "rmssd_ms": rmssd,
+        "pnn50_pct": pnn50,
+    }
+
 
 methods_results = {
     "thermal_mean": r1,
     "ica": r2,
     "garbey": r3,
 }
+
+hrv_results = {}
+
+for method_name, result in methods_results.items():
+    hr_sig = result.get("hr_signal")
+
+    if hr_sig is None or np.isnan(hr_sig).all():
+        print(f"\n  ⚠ {method_name}: kein hr_signal")
+        continue
+
+    hrv = compute_hrv(hr_sig, fps, method_name)
+
+    if hrv is None:
+        print(f"\n  ⚠ {method_name}: zu wenig Peaks")
+        continue
+
+    hrv_results[method_name] = hrv
+
+    print(f"\n  ── {method_name} ──")
+    print(f"     Peaks:     {hrv['n_peaks']}")
+    print(f"     Mean IBI:  {hrv['mean_ibi_ms']:.1f} ms")
+    print(f"     Mean HR:   {hrv['mean_hr_bpm']:.1f} BPM "
+          f"(GT: {gt_hr:.1f})")
+    print(f"     SDNN:      {hrv['sdnn_ms']:.2f} ms")
+    print(f"     RMSSD:     {hrv['rmssd_ms']:.2f} ms")
+    print(f"     pNN50:     {hrv['pnn50_pct']:.1f} %")
+
+# ── HRV Plots ──
+print(f"\n{'─' * 50}")
+print("Generating HRV plots...")
+
+for method_name, hrv in hrv_results.items():
+    try:
+        import matplotlib
+        matplotlib.use("Agg")
+        import matplotlib.pyplot as plt
+
+        fig, axes = plt.subplots(3, 1, figsize=(14, 10))
+        fig.suptitle(
+            f"HRV – {method_name} | {recording_id} "
+            f"({duration_s:.0f}s)",
+            fontsize=14, fontweight="bold",
+        )
+
+        t = np.arange(len(hrv["filtered"])) / fps
+
+        # ── Plot 1: Signal + Peaks ──
+        ax1 = axes[0]
+        ax1.plot(t, hrv["filtered"],
+                 color="steelblue", lw=0.8,
+                 label="HR-filtered signal")
+        ax1.plot(t[hrv["peaks"]],
+                 hrv["filtered"][hrv["peaks"]],
+                 "rv", markersize=8,
+                 label=f"Peaks (n={hrv['n_peaks']})")
+        ax1.set_xlabel("Zeit [s]")
+        ax1.set_ylabel("Amplitude")
+        ax1.set_title("Gefiltertes HR-Signal mit Peaks")
+        ax1.legend(loc="upper right")
+        ax1.grid(True, alpha=0.3)
+
+        # ── Plot 2: IBI Tachogramm ──
+        ax2 = axes[1]
+        peak_times = hrv["peaks"][1:] / fps
+        ax2.plot(peak_times, hrv["ibi_ms"],
+                 "o-", color="darkorange", markersize=4,
+                 lw=1.2, label="IBI")
+        ax2.axhline(hrv["mean_ibi_ms"],
+                     color="gray", ls="--", lw=1,
+                     label=f"Mean: {hrv['mean_ibi_ms']:.0f} ms")
+        ax2.fill_between(
+            peak_times,
+            hrv["mean_ibi_ms"] - hrv["sdnn_ms"],
+            hrv["mean_ibi_ms"] + hrv["sdnn_ms"],
+            alpha=0.2, color="orange",
+            label=f"±SDNN: {hrv['sdnn_ms']:.1f} ms",
+        )
+        ax2.set_xlabel("Zeit [s]")
+        ax2.set_ylabel("IBI [ms]")
+        ax2.set_title("Inter-Beat-Intervall (Tachogramm)")
+        ax2.legend(loc="upper right")
+        ax2.grid(True, alpha=0.3)
+
+        # ── Plot 3: HRV Metriken ──
+        ax3 = axes[2]
+        ax3.axis("off")
+
+        metrics_text = (
+            f"Mean HR:   {hrv['mean_hr_bpm']:.1f} BPM "
+            f"  (GT: {gt_hr:.1f} BPM)\n"
+            f"Mean IBI:  {hrv['mean_ibi_ms']:.1f} ms\n"
+            f"SDNN:      {hrv['sdnn_ms']:.2f} ms\n"
+            f"RMSSD:     {hrv['rmssd_ms']:.2f} ms\n"
+            f"pNN50:     {hrv['pnn50_pct']:.1f} %\n"
+            f"Peaks:     {hrv['n_peaks']}\n"
+            f"Duration:  {duration_s:.1f} s"
+        )
+
+        ax3.text(
+            0.5, 0.5, metrics_text,
+            transform=ax3.transAxes,
+            fontsize=13, fontfamily="monospace",
+            verticalalignment="center",
+            horizontalalignment="center",
+            bbox=dict(
+                boxstyle="round,pad=0.8",
+                facecolor="lightyellow",
+                edgecolor="gray",
+            ),
+        )
+        ax3.set_title("HRV Time-Domain Metriken")
+
+        plt.tight_layout()
+
+        out_dir = os.path.join(
+            "results", recording_id, "hrv")
+        os.makedirs(out_dir, exist_ok=True)
+        out_path = os.path.join(
+            out_dir, f"hrv_{method_name}.png")
+        fig.savefig(out_path, dpi=150,
+                    bbox_inches="tight")
+        plt.close(fig)
+        print(f"  ✓ {out_path}")
+
+    except Exception as e:
+        print(f"  ✗ HRV-Plot ({method_name}): {e}")
+
+# ── Signal Plots ──
+print(f"\n{'─' * 50}")
+print("Generating signal plots...")
 
 roi_names = config["methods"]["thermal_mean"]["rois"]
 roi_signals = extract_all_roi_signals(
@@ -291,5 +479,24 @@ print(f"  {'Garbey':<15} {r3['hr_bpm']:>7.1f} "
       f"{gt_hr:>8.1f} {abs(r3['hr_bpm']-gt_hr):>7.1f} "
       f"{r3['rr_bpm']:>8.1f} {gt_rr:>8.1f}")
 
-print(f"\nPlots: results/{recording_id}/")
+# ── HRV Zusammenfassung ──
+if hrv_results:
+    print(f"\n  {'─' * 58}")
+    print(f"  HRV (Time-Domain):")
+    print(f"  {'Methode':<15} {'SDNN':>8} {'RMSSD':>8} "
+          f"{'pNN50':>8} {'MeanHR':>8} {'Peaks':>6}")
+    print(f"  {'─' * 58}")
+    for m_name, hrv in hrv_results.items():
+        print(
+            f"  {m_name:<15} "
+            f"{hrv['sdnn_ms']:>7.2f} "
+            f"{hrv['rmssd_ms']:>8.2f} "
+            f"{hrv['pnn50_pct']:>7.1f}% "
+            f"{hrv['mean_hr_bpm']:>7.1f} "
+            f"{hrv['n_peaks']:>6}"
+        )
+
+print(f"\n{'═' * 50}")
+print(f"Plots: results/{recording_id}/")
+print(f"HRV:   results/{recording_id}/hrv/")
 print("FERTIG!")
