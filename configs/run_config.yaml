@@ -1,6 +1,6 @@
-# ─────────────────────────────────────────────────────────────────
+
 # Main pipeline configurations
-# ─────────────────────────────────────────────────────────────────
+
 
 # Process multiple datasets sequentially
 datasets:
@@ -13,7 +13,7 @@ datasets:
 processing:
   streaming: true
   max_frames: null
-  frame_step: 2                        # Process every second frame only
+  frame_step: 2                        # Process every frame
   dtype: float16 
 
 # Used face detection (YOLO)
@@ -57,6 +57,7 @@ methods:
         p2: 49
 
 # Signal processing
+# Frequency limits are based on typical literature values.
 signal:
   hr_bandpass:
     low: 0.7                            # [Hz] → ~42 BPM
