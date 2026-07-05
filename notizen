@@ -1,6 +1,0 @@
-(toolbox) MacBook-Air-4:test_toolbox valeriamoltschanov$ python main.py --config configs/run_config.yaml
-Traceback (most recent call last):
-  File "/Users/valeriamoltschanov/Desktop/test_toolbox/main.py", line 44, in <module>
-    from preprocessing.hrv_analysis import (
-ImportError: cannot import name 'compute_ibi' from 'preprocessing.hrv_analysis' (/Users/valeriamoltschanov/Desktop/test_toolbox/preprocessing/hrv_analysis.py)
-(toolbox) MacBook-Air-4:test_toolbox valeriamoltschanov$
