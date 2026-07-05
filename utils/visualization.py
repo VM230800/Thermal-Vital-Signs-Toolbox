@@ -1,6 +1,6 @@
 """
 utils/visualization.py
-======================
+
 Diagnostic plots and optional video clips.
 Saved automatically when output.save_plots = true.
 Video clips only when output.save_video = true.
@@ -33,12 +33,8 @@ def _vital_unit(signal_type):
 
 
 def _to_color(frame):
-    """
-    Convert grayscale frame to colormap (Inferno).
-    Returns BGR uint8 image ready for cv2.
-
-    If already 3-channel, just ensures uint8.
-    """
+   
+    """Grayscale -> Inferno colormap, returns BGR uint8 for cv2. If already 3-channel, just makes sure it's uint8."""
     if len(frame.shape) == 2 or frame.shape[2] == 1:
         gray = (
             frame if len(frame.shape) == 2
@@ -106,8 +102,7 @@ def _draw_overlays(frame, keypoints,
 
 def _resample_to_match(signal, source_fps,
                        target_fps, target_length):
-    """Resample a signal from source_fps to
-    target_fps."""
+    """Resample source_fps -> target_fps."""
     duration = target_length / target_fps
     n_source = int(duration * source_fps)
     n_source = min(n_source, len(signal))
@@ -119,13 +114,11 @@ def _resample_to_match(signal, source_fps,
     return resample(clipped, target_length)
 
 
-# ══════════════════════════════════════════════════════════
-# 1. ROI Overlay Image (all keypoints)
-# ══════════════════════════════════════════════════════════
+# --- ROI overlay (all keypoints) ---
 
 def save_roi_overlay(frame, keypoints,
                      recording_id, save_dir):
-    """Save one annotated frame as SVG."""
+    """Save one annotated frame (keypoints + ROIs) as SVG."""
     rec_dir = os.path.join(save_dir, recording_id)
     os.makedirs(rec_dir, exist_ok=True)
     vis = _draw_overlays(
@@ -147,21 +140,13 @@ def save_roi_overlay(frame, keypoints,
     print(f"  Saved: {path}")
 
 
-# ══════════════════════════════════════════════════════════
-# 1b. Method-specific ROI Overlay
-# ══════════════════════════════════════════════════════════
+# --- Method-specific ROI Overlay ---
 
 def save_method_roi_overlay(
     frame, keypoints, method_name,
     method_config, recording_id, save_dir,
 ):
-    """
-    Save method-specific ROI overlay showing exactly
-    which regions each method uses.
-
-    - thermal_mean / ica: circles on ROIs
-    - garbey: lines along blood vessels
-    """
+    """Draw method-specific ROI overlay (circles for thermal_mean/ica, vessel lines for garbey)."""
     rec_dir = os.path.join(save_dir, recording_id)
     os.makedirs(rec_dir, exist_ok=True)
 
@@ -371,9 +356,7 @@ def save_method_roi_overlay(
     print(f"  Saved: {path}")
 
 
-# ══════════════════════════════════════════════════════════
-# 2. Signal Analysis Plot
-# ══════════════════════════════════════════════════════════
+# --- Signal Analysis Plot ---
 
 def save_signal_plot(
     raw_signal, filtered_signal, fps,
@@ -478,9 +461,7 @@ def save_signal_plot(
     print(f"  Saved: {path}")
 
 
-# ══════════════════════════════════════════════════════════
-# 3. Signal Comparison – Predicted vs Ground Truth
-# ══════════════════════════════════════════════════════════
+# --- Signal Comparison – Predicted vs Ground Truth ---
 
 def save_signal_comparison(
     predicted_signal, gt_signal, fps,
@@ -490,11 +471,8 @@ def save_signal_comparison(
     bandpass=(0.7, 3.5),
     gt_fps=None,
 ):
-    """
-    Plot predicted signal vs ground truth signal.
-    Dashed lines mark the actual peaks of the
-    displayed curves for visual consistency.
-    """
+    
+    """Predicted vs GT signal. Dashed lines = actual peaks of the plotted curves, not the metadata BPM."""
     fig, axes = plt.subplots(2, 1, figsize=(14, 8))
 
     unit = _vital_unit(signal_type)
@@ -547,9 +525,9 @@ def save_signal_comparison(
     gt_norm = gt_norm[:n]
     time_axis = np.arange(n) / fps
 
-    # ══════════════════════════════════════════
-    # Upper plot: Time Domain
-    # ══════════════════════════════════════════
+    
+    # --- Upper plot: Time Domain ---
+
     ax1 = axes[0]
     ax1.plot(
         time_axis, gt_norm,
@@ -591,9 +569,8 @@ def save_signal_comparison(
         ),
     )
 
-    # ══════════════════════════════════════════
-    # Lower plot: Frequency Domain
-    # ══════════════════════════════════════════
+
+    # --- Lower plot: Frequency Domain ---
     ax2 = axes[1]
 
     window = np.hanning(n)
@@ -628,7 +605,8 @@ def save_signal_comparison(
         if mx_gt > 0:
             fft_gt_plot = fft_gt_plot / mx_gt
 
-        # ── Actual peaks of displayed curves ──
+        # --- Actual peaks of displayed curves ---
+        
         gt_peak_idx = np.argmax(fft_gt_plot)
         pred_peak_idx = np.argmax(fft_pred_plot)
         gt_peak_bpm = float(
@@ -700,9 +678,7 @@ def save_signal_comparison(
     print(f"    Saved: {filepath}")
 
 
-# ══════════════════════════════════════════════════════════
-# 4. Ground Truth Physiology Plot
-# ══════════════════════════════════════════════════════════
+# --- Ground Truth Physiology Plot ---
 
 def save_gt_physiology_plot(
     physio_signals, predicted_signal,
@@ -711,14 +687,8 @@ def save_gt_physiology_plot(
     signal_type, method_name,
     recording_id, save_dir,
 ):
-    """
-    Plot raw ground truth physiology waveform
-    alongside our predicted thermal signal.
-
-    2 panels:
-      1. GT waveform (high-res physio sensor)
-      2. Predicted signal (from thermal video)
-    """
+    
+    """2 panels: raw GT waveform on top, our predicted thermal signal below."""
     fig, axes = plt.subplots(2, 1, figsize=(14, 8))
 
     unit = _vital_unit(signal_type)
@@ -760,9 +730,9 @@ def save_gt_physiology_plot(
         np.arange(len(predicted_signal)) / fps_video
     )
 
-    # ══════════════════════════════════════════
-    # Panel 1: GT Waveform
-    # ══════════════════════════════════════════
+    
+    # --- Panel 1: GT Waveform ---
+
     ax1 = axes[0]
     ax1.plot(
         time_physio, waveform_clip,
@@ -791,9 +761,9 @@ def save_gt_physiology_plot(
             ),
         )
 
-    # ══════════════════════════════════════════
-    # Panel 2: Predicted Signal
-    # ══════════════════════════════════════════
+    
+    # --- Panel 2: Predicted Signal ---
+
     ax2 = axes[1]
 
     pred_norm = (
@@ -855,9 +825,7 @@ def save_gt_physiology_plot(
     print(f"    Saved: {filepath}")
 
 
-# ══════════════════════════════════════════════════════════
-# 5. Video Clip – optional
-# ══════════════════════════════════════════════════════════
+# --- Video Clip – optional ---
 
 def save_roi_video(frames, keypoints, fps,
                    recording_id, save_dir,
@@ -895,21 +863,15 @@ def save_roi_video(frames, keypoints, fps,
     )
 
 
-# ══════════════════════════════════════════════════════════
-# 6. HRV Analysis – IBI + Tachogram + Metrics
-# ══════════════════════════════════════════════════════════
+# --- HRV Analysis – IBI + Tachogram + Metrics ---
 
 def save_hrv_plot(
     signal, fps, ibi_result, hrv_metrics,
     method_name, recording_id, save_dir,
     gt_bpm=None,
 ):
-    """
-    3-panel HRV diagnostic plot:
-      1. Signal with detected peaks
-      2. IBI over time (Tachogram)
-      3. HRV metrics summary table
-    """
+    
+    """3-panel HRV plot: signal+peaks, IBI tachogram, metrics table."""
     rec_dir = os.path.join(save_dir, recording_id)
     os.makedirs(rec_dir, exist_ok=True)
 
@@ -930,9 +892,9 @@ def save_hrv_plot(
         fontsize=13, fontweight="bold",
     )
 
-    # ══════════════════════════════════════
-    # Panel 1: Signal + detected peaks
-    # ══════════════════════════════════════
+
+    # --- Panel 1: Signal + detected peaks ---
+
     ax1 = axes[0]
     time_axis = np.arange(len(signal)) / fps
 
@@ -955,9 +917,9 @@ def save_hrv_plot(
     ax1.legend(loc="upper right")
     ax1.grid(True, alpha=0.3)
 
-    # ══════════════════════════════════════
-    # Panel 2: Tachogram (IBI over time)
-    # ══════════════════════════════════════
+
+    # --- Panel 2: Tachogram (IBI over time) ---
+    
     ax2 = axes[1]
     ibis_ms = ibi_result["ibis_ms"]
 
@@ -997,9 +959,9 @@ def save_hrv_plot(
     ax2.legend(loc="upper right")
     ax2.grid(True, alpha=0.3)
 
-    # ══════════════════════════════════════
-    # Panel 3: HRV Metrics Table
-    # ══════════════════════════════════════
+  
+    # --- Panel 3: HRV Metrics Table ---
+
     ax3 = axes[2]
     ax3.axis("off")
 
