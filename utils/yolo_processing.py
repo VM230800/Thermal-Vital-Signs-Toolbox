@@ -1,6 +1,6 @@
 """
 utils/yolo_processing.py
-========================
+
 Universal YOLO-based face cropping and keypoint extraction.
 
 Accepts frames in any format from the dataset loaders:
@@ -27,9 +27,7 @@ from ultralytics import YOLO
 NUM_KEYPOINTS = 54
 
 
-# -----------------------------------------------------------
-# Internal helpers
-# -----------------------------------------------------------
+# --- Internal helpers ---
 
 def _ensure_uint8_3ch(frames):
     """
@@ -81,10 +79,7 @@ def _ensure_uint8_3ch(frames):
 
 
 def _ensure_single_uint8_3ch(frame):
-    """
-    Convert a SINGLE frame to (H, W, 3) uint8.
-    Used by streaming mode.
-    """
+  """Convert a single frame to (H, W, 3) uint8. Used in streaming mode."""
     arr = np.array(frame)
 
     # Already uint8 3-channel
@@ -126,12 +121,7 @@ def _ensure_single_uint8_3ch(frame):
 
 def _detect_face_box(model, frame, padding=50,
                      confidence=0.5):
-    """
-    Detect the largest face bounding box in a frame.
-
-    Returns:
-        tuple (x1, y1, x2, y2)
-    """
+    """Detect the largest face bounding box in a frame. Returns (x1, y1, x2, y2)."""
     h, w = frame.shape[:2]
 
     results = model(frame, verbose=False, conf=confidence)
@@ -163,12 +153,7 @@ def _detect_face_box(model, frame, padding=50,
 
 
 def _extract_keypoints(model, frame, confidence=0.5):
-    """
-    Extract facial keypoints from a single cropped frame.
-
-    Returns:
-        np.ndarray (54, 2) float32, NaN where missing
-    """
+    """ Extract facial keypoints from a single cropped frame. Returns: np.ndarray (54, 2) float32, NaN where missing."""
     keypoints = np.full(
         (NUM_KEYPOINTS, 2), np.nan, dtype=np.float32)
 
@@ -189,27 +174,22 @@ def _extract_keypoints(model, frame, confidence=0.5):
     return keypoints
 
 
-# -----------------------------------------------------------
-# Public API – All frames in RAM
-# -----------------------------------------------------------
+
+# --- Public API – All frames in RAM ---
 
 def process_with_yolo(frames, model_path,
                       target_size=(400, 400),
                       padding=50, confidence=0.5):
-    """
-    Crop video to stable face region + extract keypoints.
-
-    Args:
-        frames:      np.ndarray from any loader
-        model_path:  path to YOLO .pt model
-        target_size: (W, H) resize target
-        padding:     pixels around face box
-        confidence:  YOLO detection confidence
-
-    Returns:
-        cropped_frames: (N, H, W, 3) uint8
-        keypoints:      (N, 54, 2) float32
-    """
+    
+    """ Crop video to stable face region and extract keypoints.
+    
+    frames: np.ndarray from any loader
+    model_path: path to YOLO .pt model
+    target_size: (W, H) resize target
+    padding: pixels around face box
+    confidence: YOLO detection confidence
+    
+    Returns cropped_frames (N, H, W, 3) uint8 and keypoints (N, 54, 2) float32."""
     frames = _ensure_uint8_3ch(frames)
 
     if frames.ndim != 4 or frames.shape[-1] != 3:
@@ -261,30 +241,21 @@ def process_with_yolo(frames, model_path,
     return cropped_frames, keypoints
 
 
-# -----------------------------------------------------------
-# Public API – Streaming (RAM-friendly)
-# -----------------------------------------------------------
+
+# --- Public API – Streaming (RAM-friendly) ---
 
 def process_with_yolo_streaming(frame_iterator, model_path,
                                 target_size=(400, 400),
                                 padding=50, confidence=0.5):
-    """
-    Process frames one-by-one through YOLO.
-
-    Only ONE original frame in RAM at a time.
-    Face box detected on first frame, reused for all.
-
-    Args:
-        frame_iterator: yields frames one-by-one
-        model_path:     path to YOLO .pt model
-        target_size:    (W, H) resize target
-        padding:        pixels around face box
-        confidence:     YOLO detection confidence
-
-    Returns:
-        cropped_frames: (N, H, W, 3) uint8
-        keypoints:      (N, 54, 2) float32
-    """
+    """ Process frames one at a time through YOLO, keeping only one original frame in RAM at a time. Face box is detected on the first frame and reused for the rest.
+    
+    frame_iterator: yields frames one-by-one
+    model_path: path to YOLO .pt model
+    target_size: (W, H) resize target
+    padding: pixels around face box
+    confidence: YOLO detection confidence
+    
+    Returns cropped_frames (N, H, W, 3) uint8 and keypoints (N, 54, 2) float32."""
     model = YOLO(model_path)
 
     cropped_list = []
