@@ -2,13 +2,16 @@
 Based on Garbey et al. (2007)
 
 Method:
-    1. Define a line along a blood vessel between two keypoints
-    2. Sample temperature values along this line
-    3. Average across the line width
-    4. Per line point: normalise, mirror, compute FFT
-    5. Average power spectra across all line points
-    6. Find dominant frequency
-    7. Subharmonic correction
+1. Define a line along a blood vessel between two keypoints
+2. Sample temperature values along this line
+3. Average across the line width
+4. Per line point: normalise, mirror, compute FFT
+5. Average power spectra across all line points
+6. Find dominant frequency
+7. Subharmonic correction
+
+Reference: 
+Garbey M., Sun N., Merla A. & Pavlidis I. (2007). Contract-Free Measurement of Cardiac Pulse Based on the Analysis of Thermal Imagery. IEEE Transactions on Biomedical Engineering, 54(8), 1418-1426.
 """
 
 import warnings
