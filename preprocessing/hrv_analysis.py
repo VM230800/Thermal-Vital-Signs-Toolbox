@@ -1,47 +1,27 @@
 """
-preprocessing/hrv_analysis.py
-=============================
-Inter-Beat Interval (IBI) extraction and
-Heart Rate Variability (HRV) analysis.
-
-Input:  Filtered cardiac signal + FPS
-Output: IBI series + HRV metrics
+Inter-Beat Interval (IBI) extraction and Heart Rate Variability (HRV) analysis
 """
 
 import numpy as np
 from scipy.signal import find_peaks
 
 
-def compute_ibi(signal, fps, min_bpm=40,
-                max_bpm=180):
+def compute_ibi(signal, fps, min_bpm=40, max_bpm=180):
     """
-    Extract Inter-Beat Intervals from a
-    filtered cardiac signal.
-
-    Args:
-        signal:  np.ndarray, bandpass-filtered
-        fps:     float, sampling rate
-        min_bpm: float, minimum expected HR
-        max_bpm: float, maximum expected HR
-
-    Returns:
-        dict with:
-          - peak_indices: indices of detected peaks
-          - peak_times:   peak times in seconds
-          - ibis:         intervals in seconds
-          - ibis_ms:      intervals in milliseconds
+    Extract Inter-Beat Intervals from a filtered cardiac signal
     """
-    # Min/max distance between peaks
+    # convert bpm limits into minimum peak distance in samples
     min_dist = int(fps * 60.0 / max_bpm)
     min_dist = max(min_dist, 1)
 
-    # Find peaks
+    # find peaks in the signal
     peaks, properties = find_peaks(
         signal,
         distance=min_dist,
         height=np.std(signal) * 0.3,
     )
 
+    # if there aren't enough peaks return empty results 
     if len(peaks) < 2:
         return {
             "peak_indices": peaks,
@@ -50,11 +30,12 @@ def compute_ibi(signal, fps, min_bpm=40,
             "ibis_ms": np.array([]),
         }
 
-    # Calculate IBIs
+    # convert peak positions to time
     peak_times = peaks / fps
+    # compute time differences between beats
     ibis = np.diff(peak_times)
 
-    # Filter physiologically plausible IBIs
+    # remove values that aren't physiologically realistic
     min_ibi = 60.0 / max_bpm
     max_ibi = 60.0 / min_bpm
 
@@ -68,24 +49,15 @@ def compute_ibi(signal, fps, min_bpm=40,
         "ibis_ms": ibis_clean * 1000.0,
     }
 
-
-# Alias for backwards compatibility
+# alias for backwards compatibility
 extract_ibis = compute_ibi
 
 
 def compute_hrv_metrics(ibi_input):
     """
-    Compute standard HRV time-domain metrics.
-
-    Args:
-        ibi_input: dict (from compute_ibi) OR
-                   np.ndarray of IBIs in ms
-
-    Returns:
-        dict with HRV metrics (or NaN if too
-        few beats)
+    Compute basic HRV metrics from IBI values
     """
-    # Accept both dict and raw array
+    # Accept both dict and raw array input
     if isinstance(ibi_input, dict):
         ibis_ms = ibi_input.get(
             "ibis_ms", np.array([]))
@@ -102,10 +74,10 @@ def compute_hrv_metrics(ibi_input):
             "n_beats": len(ibis_ms),
         }
 
-    # Successive differences
+    # differences between successive beats
     diffs = np.diff(ibis_ms)
 
-    # Metrics
+    # basic time-domain HRV metrics
     mean_ibi = float(np.mean(ibis_ms))
     sdnn = float(np.std(ibis_ms, ddof=1))
     rmssd = float(
@@ -115,6 +87,8 @@ def compute_hrv_metrics(ibi_input):
         np.sum(np.abs(diffs) > 50.0)
         / len(diffs) * 100.0
     )
+
+    # convert mean IBI to heart rate
     mean_hr = 60000.0 / mean_ibi
 
     return {
