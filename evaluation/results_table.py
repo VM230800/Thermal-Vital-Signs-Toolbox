@@ -1,6 +1,6 @@
 """
 results_table.py
-================
+
 Collects evaluation results and produces a formatted
 comparison table across all methods and datasets.
 
@@ -86,7 +86,9 @@ class ResultsTable:
         self._rows.append(row)
 
     def to_dataframe(self) -> pd.DataFrame:
-        """Return results as pandas DataFrame."""
+        """
+        Return results as pandas DataFrame.
+        """
         if not self._rows:
             return pd.DataFrame(columns=_DISPLAY_COLS)
         df = pd.DataFrame(self._rows)
@@ -97,7 +99,9 @@ class ResultsTable:
             ["Target", "Dataset", "Method"])
 
     def print(self) -> None:
-        """Print results table to stdout."""
+        """
+        Print results table to stdout.
+        """
         df = self.to_dataframe()
         if df.empty:
             print("No results to display.")
@@ -111,7 +115,9 @@ class ResultsTable:
 
     def save_csv(self,
                  filename: str = "results.csv") -> str:
-        """Save results as CSV file."""
+        """
+        Save results as CSV file.
+        """
         df = self.to_dataframe()
         path = os.path.join(self.save_path, filename)
         df.to_csv(path, index=False)
