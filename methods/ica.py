@@ -1,5 +1,8 @@
 """
-Uses FastICA to split mixed thermal signals from different ROIs into independent components, then selects the component with the strongest periodic pattern in the HR/RR band
+Method:
+1. Extracts temperature signals from multiple face ROIs
+2. Applies ICA to separate mixed sources
+3. Selects component with the strongest periodic signal
 
 References:
     - Poh et al. (2010): "Non-contact, automated cardiac pulse measurements using video imaging and blind source separation"
