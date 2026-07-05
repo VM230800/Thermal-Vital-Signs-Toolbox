@@ -133,17 +133,43 @@ methods/garbey.py does not use these ROIs as it defines its own line-segment geo
 
 ### Thermal Mean - methods/thermal_mean.py
 ```text
-Mean temperature per ROI per frame -> bandpass filter -> FFT -> dominant frequency -> BPM
+Mean temperature per ROI per frame
+↓
+bandpass filter
+↓
+FFT
+↓
+dominant frequency
+↓
+BPM
 ```
 
 ### ICA - methods/ica.py
 ```text
-Extracts multi-ROI temperature signals -> detrends (Savitzky-Golay) -> bandpass-filters -> z-score normalises; then applies FastICA to separate mixed signals into independent components. The component with the strongest concentrated energy in the target frequency band is selected as the HR/RR signal.
+Extracts multi-ROI temperature signals
+↓
+detrends (Savitzky-Golay)
+↓
+bandpass-filters
+↓
+z-score normalises; then applies FastICA to separate mixed signals into independent components. The component with the strongest concentrated energy in the target frequency band is selected as the HR/RR signal.
 ```
 
 ### Garbey (2007) - methods/garbey.py
 ```text
-Define a keypoint line -> sample points along the line -> mirror signal -> compute its FFT power spectrum -> average power spectrum -> find dominant frequency -> subharmonic correction
+Define a keypoint line
+↓
+sample points along the line
+↓
+mirror signal
+↓
+compute its FFT power spectrum
+↓
+average power spectrum
+↓
+find dominant frequency
+↓
+subharmonic correction
 ```
 
 ---
