@@ -67,9 +67,7 @@ from utils.visualization import (
 )
 
 
-# ─────────────────────────────────────────────────────────
-# 1. Load configuration
-# ─────────────────────────────────────────────────────────
+# --- Load configuration ---
 
 def load_config(config_path):
     """Load main config."""
@@ -78,9 +76,7 @@ def load_config(config_path):
     return config
 
 
-# ─────────────────────────────────────────────────────────
-# 2. Load dataset
-# ─────────────────────────────────────────────────────────
+# --- Load dataset --- 
 
 def load_dataset(config, dataset_config):
     """Load the dataset specified in config."""
@@ -116,15 +112,10 @@ def load_dataset(config, dataset_config):
     return dataset
 
 
-# ─────────────────────────────────────────────────────────
-# 3. YOLO + ROI computation
-# ─────────────────────────────────────────────────────────
+# --- YOLO + ROI computation --- 
 
 def run_yolo_and_rois(frames, config):
-    """
-    Face detection → crop → keypoints → ROIs.
-    All frames in RAM.
-    """
+    """ Face detection → crop → keypoints → ROIs. All frames in RAM. """
     det = config["detection"]
 
     cropped_frames, keypoints = process_with_yolo(
@@ -151,10 +142,7 @@ def run_yolo_and_rois(frames, config):
 def run_yolo_and_rois_streaming(
     dataset, idx, config, max_frames=None
 ):
-    """
-    RAM-friendly: streams frames one-by-one through
-    YOLO. Best for BP4D+ (video files).
-    """
+    """ RAM-friendly: streams frames one-by-one through YOLO. Best for BP4D+ (video files). """
     det = config["detection"]
     processing = config.get("processing", {})
     frame_step = processing.get("frame_step", 1)
@@ -209,9 +197,7 @@ def _keypoints_to_rois(keypoints):
     return rois_per_frame
 
 
-# ─────────────────────────────────────────────────────────
-# 4. Run methods
-# ─────────────────────────────────────────────────────────
+# --- Run methods --- 
 
 def init_methods(config):
     """Initialise all enabled methods."""
@@ -281,16 +267,10 @@ def run_methods(
     return results
 
 
-# ─────────────────────────────────────────────────────────
-# 5. Visualisation helpers
-# ─────────────────────────────────────────────────────────
+# --- Visualisation helpers ---
 
 def _resolve_gt_signals(sample, fps):
-    """
-    Determine ground-truth signal sources.
-    Returns (hr_gt_signal, hr_gt_fps,
-             rr_gt_signal, rr_gt_fps).
-    """
+    """ Determine ground-truth signal sources. Returns (hr_gt_signal, hr_gt_fps, rr_gt_signal, rr_gt_fps). """
     bp_wave = sample.get("bp_waveform", None)
     resp_wave = sample.get("resp_waveform", None)
     physio_fps = sample.get("physio_fps", None)
@@ -435,20 +415,13 @@ def _save_physiology_rr(
     )
 
 
-# ─────────────────────────────────────────────────────────
-# 5b. Main visualisation entry point
-# ─────────────────────────────────────────────────────────
+# --- Main visualisation entry point ---
 
 def save_visualisations(
     config, sample, cropped, keypoints,
     rois, sample_results
 ):
-    """
-    Save diagnostic plots for one recording.
-
-    Uses hr_signal / rr_signal returned directly
-    by each method – no re-extraction needed.
-    """
+    """ Save diagnostic plots for one recording. Uses hr_signal / rr_signal returned directly by each method – no re-extraction needed. """
     output = config.get("output", {})
     save_dir = output.get("save_dir", "results/")
     signal_config = config["signal"]
@@ -595,9 +568,7 @@ def save_visualisations(
                 )
 
 
-# ─────────────────────────────────────────────────────────
-# 6. Collect results for evaluation
-# ─────────────────────────────────────────────────────────
+# --- Collect results for evaluation ---
 
 def collect_results(method_results, sample,
                     method_name):
@@ -624,9 +595,7 @@ def collect_results(method_results, sample,
     }
 
 
-# ─────────────────────────────────────────────────────────
-# 7. Main pipeline
-# ─────────────────────────────────────────────────────────
+# --- Main pipeline --- 
 
 def run_pipeline(
     config_path="configs/run_config.yaml",
@@ -890,9 +859,7 @@ def run_pipeline(
     print("Done.")
 
 
-# ─────────────────────────────────────────────────────────
-# CLI
-# ─────────────────────────────────────────────────────────
+# --- CLI ---
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
