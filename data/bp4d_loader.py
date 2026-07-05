@@ -1,6 +1,6 @@
 """
 data/bp4d_loader.py
-===================
+
 BP4D+ dataset loader. Inherits from BaseLoader.
 Only implements BP4D-specific logic.
 
@@ -40,9 +40,9 @@ class BP4DDataset(BaseLoader):
             force_preprocess=force_preprocess,
         )
 
-    # ─────────────────────────────────────────────────────
+    
     # Video cache – open once, reuse
-    # ─────────────────────────────────────────────────────
+    
 
     def _get_video_cap(self, wmv_path):
         """
@@ -63,18 +63,22 @@ class BP4DDataset(BaseLoader):
         return self._video_cache_cap
 
     def _release_video_cache(self):
-        """Release cached VideoCapture to free RAM."""
+        """
+        Release cached VideoCapture to free RAM.
+        """
         if self._video_cache_cap is not None:
             self._video_cache_cap.release()
             self._video_cache_cap = None
             self._video_cache_path = None
 
-    # ─────────────────────────────────────────────────────
+  
     # BP4D-specific implementations
-    # ─────────────────────────────────────────────────────
+   
 
     def _discover_samples(self, subjects):
-        """Find all (subject, task, video_path) combos."""
+        """
+        Find all (subject, task, video_path) combos.
+        """
         if subjects is None:
             subjects = sorted([
                 d for d in os.listdir(self.thermal_dir)
@@ -106,7 +110,9 @@ class BP4DDataset(BaseLoader):
         return samples
 
     def _load_frames(self, sample_info):
-        """Load all frames from .wmv video file."""
+        """
+        Load all frames from .wmv video file.
+        """
         subj, task, wmv_path = sample_info
 
         cap = cv2.VideoCapture(wmv_path)
@@ -137,7 +143,7 @@ class BP4DDataset(BaseLoader):
 
         cap = self._get_video_cap(wmv_path)
 
-        # Check if we need to seek
+        # Check if need to seek
         current_pos = int(
             cap.get(cv2.CAP_PROP_POS_FRAMES))
         if current_pos != frame_idx:
@@ -178,7 +184,6 @@ class BP4DDataset(BaseLoader):
     def _load_ground_truth(self, sample_info, fps):
         """
         Load HR/RR ground truth from physiology files.
-
         Returns BPM values AND raw waveforms.
         """
         subj, task, wmv_path = sample_info
@@ -195,7 +200,7 @@ class BP4DDataset(BaseLoader):
             "physio_fps":     1000.0,
         }
 
-        # ── Pulse Rate BPM ──
+        # Pulse Rate BPM 
         pr_path = os.path.join(
             physio_dir, "Pulse Rate_BPM.txt")
         if os.path.exists(pr_path):
@@ -204,7 +209,7 @@ class BP4DDataset(BaseLoader):
             result["hr_bpm"] = float(
                 np.nanmean(pulse_rate))
 
-        # ── Respiration Rate BPM ──
+        # Respiration Rate BPM 
         rr_path = os.path.join(
             physio_dir, "Respiration Rate_BPM.txt")
         if os.path.exists(rr_path):
@@ -213,20 +218,20 @@ class BP4DDataset(BaseLoader):
             result["rr_bpm"] = float(
                 np.nanmedian(resp_rate))
 
-        # ── Raw BP waveform ──
+        # Raw BP waveform 
         bp_path = os.path.join(
             physio_dir, "BP_mmHg.txt")
         if os.path.exists(bp_path):
             result["bp_waveform"] = np.loadtxt(bp_path)
 
-        # ── Raw Respiration waveform ──
+        # Raw Respiration waveform 
         resp_path = os.path.join(
             physio_dir, "Resp_Volts.txt")
         if os.path.exists(resp_path):
             result["resp_waveform"] = np.loadtxt(
                 resp_path)
 
-        # ── Physiology sampling rate ──
+        # Physiology sampling rate
         if result["pulse_rate"] is not None:
             total_frames = self._get_total_frames(
                 sample_info)
