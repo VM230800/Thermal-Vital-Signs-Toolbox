@@ -1,6 +1,5 @@
 """
 data/base_loader.py
-===================
 Abstract base class for all dataset loaders.
 
 Handles all shared logic:
@@ -59,9 +58,9 @@ class BaseLoader(ABC):
         print(f"{self.__class__.__name__}: "
               f"{len(self.samples)} recordings found")
 
-    # ─────────────────────────────────────────────────────
+    
     # SHARED: Standard Python methods
-    # ─────────────────────────────────────────────────────
+    
 
     def __len__(self):
         """Total number of recordings."""
@@ -71,9 +70,9 @@ class BaseLoader(ABC):
         return (f"{self.__class__.__name__}: "
                 f"{len(self.samples)} recordings")
 
-    # ─────────────────────────────────────────────────────
+    
     # SHARED: __getitem__ (loads everything)
-    # ─────────────────────────────────────────────────────
+    
 
     def __getitem__(self, idx):
         """
@@ -100,12 +99,12 @@ class BaseLoader(ABC):
         subject = self._get_subject(sample_info)
         task = self._get_task(sample_info)
 
-        # ── Remove warmup ──
+        # Remove warmup 
         warmup_frames = int(self.warmup_seconds * fps)
         if warmup_frames > 0 and warmup_frames < len(frames):
             frames = frames[warmup_frames:]
 
-        # ── Convert to float16 to save RAM ──
+        # Convert to float16 to save RAM 
         if frames.dtype != np.float16:
             frames = frames.astype(np.float16)
 
@@ -125,9 +124,9 @@ class BaseLoader(ABC):
 
         return result
 
-    # ─────────────────────────────────────────────────────
+    
     # SHARED: iter_frames (RAM-friendly streaming)
-    # ─────────────────────────────────────────────────────
+    
 
     def iter_frames(self, idx, max_frames=None,
                     frame_step=1):
@@ -180,9 +179,9 @@ class BaseLoader(ABC):
             yield frame
             count += 1
 
-    # ─────────────────────────────────────────────────────
+   
     # SHARED: get_metadata (no frames loaded)
-    # ─────────────────────────────────────────────────────
+   
 
     def get_metadata(self, idx):
         """
@@ -219,9 +218,9 @@ class BaseLoader(ABC):
 
         return result
 
-    # ─────────────────────────────────────────────────────
+    
     # SHARED: Cache system
-    # ─────────────────────────────────────────────────────
+    
 
     def _get_cache_path(self, recording_id):
         """Full path for cached file."""
@@ -243,9 +242,9 @@ class BaseLoader(ABC):
         path = self._get_cache_path(recording_id)
         return dict(np.load(path, allow_pickle=True))
 
-    # ─────────────────────────────────────────────────────
+    
     # ABSTRACT: Child classes MUST implement these
-    # ─────────────────────────────────────────────────────
+    
 
     @abstractmethod
     def _discover_samples(self, subjects):
