@@ -1,6 +1,6 @@
 """
 evaluation/bland_altman.py
-===============
+
 Bland-Altman statistics and plots for the Thermal Vital Signs Toolbox.
 
 Computes agreement metrics between a ground-truth reference signal
@@ -123,12 +123,14 @@ class BlandAltman:
             self.mean_error - 1.96 * effective_std,
         ]
 
-    # ------------------------------------------------------------------
+    
     # Statistics output
-    # ------------------------------------------------------------------
+    
 
     def print_stats(self, round_amount: int = 4) -> None:
-        """Print all computed metrics to stdout."""
+        """
+        Print all computed metrics to stdout.
+        """
         r = round_amount
         print(f"Mean error               = {round(self.mean_error,              r)}")
         print(f"Mean absolute error      = {round(self.mean_absolute_error,     r)}")
@@ -140,7 +142,9 @@ class BlandAltman:
         print(f"-95% Limit of Agreement  = {round(self.CI95[1],                 r)}")
 
     def return_stats(self) -> dict:
-        """Return all metrics as a plain dictionary (for CSV export etc.)."""
+        """
+        Return all metrics as a plain dictionary (for CSV export etc.).
+        """
         return {
             "mean_error":              self.mean_error,
             "mean_absolute_error":     self.mean_absolute_error,
@@ -152,9 +156,9 @@ class BlandAltman:
             "CI_95_lower":             self.CI95[1],
         }
 
-    # ------------------------------------------------------------------
+    
     # Single-method plots
-    # ------------------------------------------------------------------
+    
 
     def scatter_plot(
         self,
@@ -279,13 +283,15 @@ class BlandAltman:
         plt.close(fig)
         print(f"Saved: {save_file}")
 
-    # ------------------------------------------------------------------
+    
     # Private helpers
-    # ------------------------------------------------------------------
+    
 
     @staticmethod
     def _to_series(data, name: str) -> pd.Series:
-        """Convert list, numpy array, or Series."""
+        """
+        Convert list, numpy array, or Series.
+        """
         if isinstance(data, pd.Series):
             return data.reset_index(drop=True)
         if isinstance(data, (list, np.ndarray)):
@@ -298,7 +304,9 @@ class BlandAltman:
 
     @staticmethod
     def _jitter(arr: pd.Series) -> pd.Series:
-        """Add tiny random noise for visibility."""
+        """
+        Add tiny random noise for visibility.
+        """
         data_range = arr.max() - arr.min()
         if data_range == 0:
             return arr
@@ -306,9 +314,9 @@ class BlandAltman:
             * 0.01 * data_range
 
 
-# ══════════════════════════════════════════════════════════
+
 # Combined plots – all methods in one figure
-# ══════════════════════════════════════════════════════════
+
 
 def combined_scatter_plot(
     methods_data: dict,
@@ -321,9 +329,7 @@ def combined_scatter_plot(
 ) -> None:
     """
     Scatter plot with all methods in one figure.
-
-    Parameters
-    ----------
+    
     methods_data : dict
         {method_name: (gt_array, est_array), ...}
     """
@@ -394,9 +400,7 @@ def combined_difference_plot(
     Bland-Altman difference plot with all methods
     in one figure. Each method gets its own colour,
     marker, and LoA lines.
-
-    Parameters
-    ----------
+    
     methods_data : dict
         {method_name: (gt_array, est_array), ...}
     """
@@ -461,9 +465,9 @@ def combined_difference_plot(
     print(f"Saved: {path}")
 
 
-# ---------------------------------------------------------------------------
+
 # Quick test
-# ---------------------------------------------------------------------------
+
 
 if __name__ == "__main__":
     rng = np.random.default_rng(42)
