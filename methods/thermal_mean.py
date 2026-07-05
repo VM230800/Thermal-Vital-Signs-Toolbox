@@ -1,19 +1,14 @@
 """
-methods/thermal_mean.py
-=======================
-Vital sign estimation via mean ROI temperature
-fluctuations.
-
 Method:
-    1. Extract mean temperature per ROI per frame
-    2. Bandpass filter to isolate HR or RR frequency
-    3. FFT to find dominant frequency
-    4. Convert to BPM
+1. Extract mean temperature per ROI per frame
+2. Bandpass filter to isolate HR or RR frequency
+3. FFT to find dominant frequency
+4. Convert to BPM
 
 References:
-    - Garbey et al. (2007)
-    - Cho et al. (2017)
-    - Tarmizi et al. (2022)
+- Garbey et al. (2007)
+- Cho et al. (2017)
+- Tarmizi et al. (2022)
 """
 
 import numpy as np
@@ -31,7 +26,7 @@ from preprocessing.peak_extraction import (
 
 class ThermalMeanMethod:
     """
-    Baseline method: mean ROI temperature → FFT → BPM.
+    Mean ROI temperature → FFT → BPM
     """
 
     def __init__(self, method_config, signal_config):
@@ -43,13 +38,9 @@ class ThermalMeanMethod:
 
     def estimate(self, frames, rois_per_frame, fps):
         """
-        Run thermal mean estimation on one recording.
-
-        Returns:
-            dict with hr_bpm, rr_bpm, roi_results,
-            method, hr_signal, rr_signal
+        Run thermal mean estimation
         """
-        # ── 1. Extract temperature signals ──
+        # extract temperature signals
         roi_signals = extract_all_roi_signals(
             frames, rois_per_frame, self.rois
         )
@@ -61,7 +52,7 @@ class ThermalMeanMethod:
             "fft_window", 512
         )
 
-        # ── 2. Estimate HR ──
+        # estimate heart rate
         hr_bpm = float("nan")
         hr_roi_results = {}
         hr_signal = None
@@ -88,13 +79,13 @@ class ThermalMeanMethod:
                         filtered
                     )
 
+            # heart rate is median of all ROIs
             if valid_bpms:
                 hr_bpm = float(
                     np.median(valid_bpms)
                 )
 
-            # Use the signal from the ROI
-            # closest to the median BPM
+            # pick ROI signal that is closest to final value
             if (valid_bpms
                     and filtered_signals):
                 best_idx = int(np.argmin([
@@ -105,7 +96,7 @@ class ThermalMeanMethod:
                     filtered_signals[best_idx]
                 )
 
-        # ── 3. Estimate RR ──
+        # estimate respiration rate
         rr_bpm = float("nan")
         rr_roi_results = {}
         rr_signal = None
@@ -132,11 +123,13 @@ class ThermalMeanMethod:
                         filtered
                     )
 
+            # median over all ROIs
             if valid_bpms:
                 rr_bpm = float(
                     np.median(valid_bpms)
                 )
 
+            # pick signal closest to esimated RR
             if (valid_bpms
                     and filtered_signals):
                 best_idx = int(np.argmin([
@@ -147,7 +140,7 @@ class ThermalMeanMethod:
                     filtered_signals[best_idx]
                 )
 
-        # ── 4. Build result ──
+        # build result
         return {
             "hr_bpm": hr_bpm,
             "rr_bpm": rr_bpm,
@@ -160,23 +153,17 @@ class ThermalMeanMethod:
             "rr_signal": rr_signal,
         }
 
-    def _estimate_single_roi(
-        self, signal, fps, bp_config,
-        method, fft_window,
-    ):
+    def _estimate_single_roi(self, signal, fps, bp_config, method, fft_window):
         """
-        Estimate BPM from a single ROI signal.
-
-        Returns:
-            tuple: (bpm, filtered_signal)
-                   filtered_signal is None if
-                   estimation fails
+        Estimate BPM from one ROI signal
         """
+        # fill missing values
         signal_clean = interpolate_nan(signal)
 
         if np.isnan(signal_clean).all():
             return float("nan"), None
 
+        # check if signal is long enough to be filtered
         min_length = bp_config["order"] * 3 + 1
         if len(signal_clean) < min_length:
             return float("nan"), None
@@ -191,6 +178,7 @@ class ThermalMeanMethod:
         except ValueError:
             return float("nan"), None
 
+        # choose frequency estimation method
         if method == "fft":
             freq_hz = estimate_frequency_fft(
                 filtered, fps, fft_window
