@@ -1,16 +1,8 @@
 """
-methods/ica.py
-==============
-ICA-based vital sign estimation from thermal video.
-
-Uses FastICA to separate mixed thermal signals into
-independent components, then selects the component
-with the strongest periodic signal in the HR/RR band.
+Uses FastICA to split mixed thermal signals from different ROIs into independent components, then selects the component with the strongest periodic pattern in the HR/RR band
 
 References:
-    - Poh et al. (2010): "Non-contact, automated cardiac
-      pulse measurements using video imaging and blind
-      source separation"
+    - Poh et al. (2010): "Non-contact, automated cardiac pulse measurements using video imaging and blind source separation"
     - Adapted from rPPG (visible light) to thermal imaging
 """
 
@@ -25,37 +17,28 @@ from preprocessing.signal_extraction import (
 )
 
 
-# ─────────────────────────────────────────────────────────
-# Preprocessing
-# ─────────────────────────────────────────────────────────
-
 def _detrend(signal, fps):
     """
-    Remove slow drift using Savitzky-Golay filter.
-    Window adapts to signal length.
+    Remove slow drift from signal using a Savitzky-Golay filter. The Window adapts to the signal length
     """
     window = int(4.0 * fps)
+    # savglo_filter requires a odd window length
     if window % 2 == 0:
         window += 1
     window = max(window, 5)
 
-    # Window must be smaller than signal
+    # window must be smaller than signal
     if len(signal) <= window:
         return signal - np.mean(signal)
 
+    # estimate slow trend and substract it
     trend = savgol_filter(signal, window, polyorder=2)
     return signal - trend
 
 
 def _preprocess_for_ica(signals, fps, low_hz, high_hz):
     """
-    Prepare multi-ROI signals for ICA decomposition.
-
-    Pipeline:
-        1. Interpolate NaN gaps
-        2. Remove slow drift
-        3. Bandpass filter
-        4. Z-score normalisation
+    Prepare ROI signals before running ICA
     """
     nyq = fps / 2.0
     low_norm = np.clip(low_hz / nyq, 0.001, 0.999)
@@ -68,15 +51,15 @@ def _preprocess_for_ica(signals, fps, low_hz, high_hz):
     channels = []
 
     for name, raw_signal in signals.items():
-        # 1. Interpolate NaN
+        # fill missing values
         s = interpolate_nan(raw_signal)
         if np.isnan(s).all():
             continue
 
-        # 2. Detrend
+        # remove slow drift
         s = _detrend(s, fps)
 
-        # 3. Bandpass
+        # bandpass filter
         if low_norm < high_norm:
             try:
                 b, a = butter(
@@ -86,7 +69,7 @@ def _preprocess_for_ica(signals, fps, low_hz, high_hz):
             except Exception:
                 continue
 
-        # 4. Normalise
+        # z-score normalization
         std = s.std()
         if std > 1e-10:
             s = (s - s.mean()) / std
@@ -103,14 +86,9 @@ def _preprocess_for_ica(signals, fps, low_hz, high_hz):
     return matrix, roi_names
 
 
-# ─────────────────────────────────────────────────────────
-# ICA decomposition
-# ─────────────────────────────────────────────────────────
-
 def _run_ica(signals, n_components=None):
     """
-    Apply FastICA with built-in whitening.
-    Simple and robust – no PCA pre-whitening needed.
+    Run FastICA on the input signals
     """
     if n_components is None:
         n_components = signals.shape[1]
@@ -132,19 +110,9 @@ def _run_ica(signals, n_components=None):
         warnings.warn(f"ICA failed: {e}")
         return signals
 
-
-# ─────────────────────────────────────────────────────────
-# Component selection
-# ─────────────────────────────────────────────────────────
-
-def _select_best_component(components, fps,
-                            low_hz, high_hz):
+def _select_best_component(components, fps, low_hz, high_hz):
     """
-    Select ICA component with strongest FFT peak
-    in the target frequency band.
-
-    Simple and reliable: just find which component
-    has the most concentrated energy in the band.
+    Select ICA component with strongest FFT peak in the target frequency band
     """
     N, K = components.shape
 
@@ -152,7 +120,7 @@ def _select_best_component(components, fps,
     best_freq = 0.0
     best_idx = 0
 
-    # Zero-pad for better frequency resolution
+    # zero-pad for better frequency resolution
     nfft = max(512, N * 2)
 
     for k in range(K):
@@ -164,7 +132,7 @@ def _select_best_component(components, fps,
         fft_vals = np.abs(
             np.fft.rfft(comp * window, n=nfft))
 
-        # Only look in target band
+        # only look at frequencies in target band
         mask = (freqs >= low_hz) & (freqs <= high_hz)
         if not mask.any():
             continue
@@ -172,7 +140,6 @@ def _select_best_component(components, fps,
         band_fft = fft_vals[mask]
         band_freqs = freqs[mask]
 
-        # Score = peak power / total band power
         total = band_fft.sum()
         if total < 1e-10:
             continue
@@ -181,8 +148,7 @@ def _select_best_component(components, fps,
         peak_power = band_fft[peak_idx]
         peak_freq = band_freqs[peak_idx]
 
-        # Concentration: how much energy is at the peak
-        # vs spread across the band
+        # concentration: how much energy is at the peak vs spread across the band
         score = float(peak_power / total)
 
         if score > best_score:
@@ -193,17 +159,9 @@ def _select_best_component(components, fps,
     return best_freq, best_idx
 
 
-# ─────────────────────────────────────────────────────────
-# Public API
-# ─────────────────────────────────────────────────────────
-
 class ICAMethod:
     """
-    ICA-based vital sign estimator.
-
-    Extracts temperature signals from multiple face ROIs,
-    applies ICA to separate mixed sources, then selects
-    the component with the strongest periodic signal.
+    ICA-based vital sign estimator: extracts temperature signals from multiple face ROIs, applies ICA to separate mixed sources, then selects component with the strongest periodic signal.
     """
 
     def __init__(self, method_config, signal_config):
@@ -215,18 +173,9 @@ class ICAMethod:
 
     def estimate(self, frames, rois_per_frame, fps):
         """
-        Run ICA estimation on one recording.
-
-        Args:
-            frames:         (N, H, W, 3) uint8
-            rois_per_frame: list of ROI dicts
-            fps:            float
-
-        Returns:
-            dict with hr_bpm, rr_bpm, method,
-            hr_signal, rr_signal
+        Run ICA estimation
         """
-        # ── 1. Extract ROI signals ──
+        # extract signals from ROIs
         roi_signals = extract_all_roi_signals(
             frames, rois_per_frame, self.rois
         )
@@ -242,7 +191,7 @@ class ICAMethod:
             )
             return self._empty_result()
 
-        # ── 2. Estimate HR ──
+        # estimate heart rate
         hr_bpm = float("nan")
         hr_component = None
 
@@ -273,7 +222,7 @@ class ICAMethod:
                         components_hr[:, hr_idx]
                     )
 
-        # ── 3. Estimate RR ──
+        # estimate respiration rate
         rr_bpm = float("nan")
         rr_component = None
 
