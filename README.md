@@ -63,7 +63,7 @@ Thermal Vital Signs Toolbox
 |   |-- peak_extraction.py       <- Bandpass filtering + BPM estimation
 |   |-- roi_extraction.py        <- Keypoints to ROI boxes
 |   |-- signal_extraction.py     <- Frames + ROIs to temperature signal
-|   |-- hrv_analysis.py          <- 
+|   |-- hrv_analysis.py          <- Inter-Beat Interval (IBI) extraction & HRV time-domain metrics
 |-- results/
 |
 +-- utils/
