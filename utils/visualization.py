@@ -912,7 +912,7 @@ def save_hrv_plot(
         ax1.plot(
             peaks / fps, signal[peaks],
             "rv", markersize=8, alpha=0.7,
-            label=f"Peaks ({n_beats})",
+            label="Detected peaks (visualisation only)",
         )
 
     ax1.set_ylabel("Amplitude")
