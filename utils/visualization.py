@@ -548,7 +548,10 @@ def save_signal_comparison(
 
     ax1.set_xlabel("Time [s]")
     ax1.set_ylabel("Normalised Amplitude")
-    ax1.set_title("Time Domain (normalised)")
+    ax1.set_title(
+        "Time Domain (visualisation only)\n"
+        "Heart rate estimated from frequency domain"
+    )
     ax1.legend(loc="upper right")
     ax1.grid(True, alpha=0.3)
 
