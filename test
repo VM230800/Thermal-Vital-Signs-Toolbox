@@ -1,0 +1,29 @@
+(toolbox) MacBook-Air-4:Thermal-Vital-Signs-Toolbox valeriamoltschanov$ python demo_video.py
+/Users/valeriamoltschanov/Desktop/Thermal-Vital-Signs-Toolbox/demo_video.py:18: SyntaxWarning: invalid escape sequence '\ '
+  ROOT_DIR = "/Users/valeriamoltschanov/Desktop/MedTec/Master/4.\ Semester/PjS/BP4D+/Thermal/F001"
+Loading /Users/valeriamoltschanov/Desktop/MedTec/Master/4.\ Semester/PjS/BP4D+/Thermal/F001/T1/synchronized_data_0.npz...
+Traceback (most recent call last):
+  File "/Users/valeriamoltschanov/Desktop/Thermal-Vital-Signs-Toolbox/demo_video.py", line 267, in <module>
+    main()
+  File "/Users/valeriamoltschanov/Desktop/Thermal-Vital-Signs-Toolbox/demo_video.py", line 113, in main
+    frames, pulse, resp, fps = load_npz(
+                               ^^^^^^^^^
+  File "/Users/valeriamoltschanov/Desktop/Thermal-Vital-Signs-Toolbox/demo_video.py", line 35, in load_npz
+    raw = np.load(npz_path, allow_pickle=True)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/Caskroom/miniforge/base/envs/toolbox/lib/python3.12/site-packages/numpy/lib/npyio.py", line 427, in load
+    fid = stack.enter_context(open(os_fspath(file), "rb"))
+                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: '/Users/valeriamoltschanov/Desktop/MedTec/Master/4.\\ Semester/PjS/BP4D+/Thermal/F001/T1/synchronized_data_0.npz'
+(toolbox) MacBook-Air-4:Thermal-Vital-Signs-Toolbox valeriamoltschanov$ 
+
+
+das habe ich verändert: # ── Config ──────────────────────────────────────────────
+ROOT_DIR = "/Users/valeriamoltschanov/Desktop/MedTec/Master/4.\ Semester/PjS/BP4D+/Thermal/F001"
+SUBJECT = "T1"
+REC_ID = 0
+WINDOW_SEC = 10        # sliding window in seconds
+STEP_SEC = 0.5         # step size in seconds
+OUTPUT_FILE = "demo_rec0.mp4"
+OUTPUT_FPS = 30
+# ──────────────────
