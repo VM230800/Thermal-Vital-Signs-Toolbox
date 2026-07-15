@@ -490,7 +490,7 @@ def save_signal_comparison(
         f"    |    "
         f"GT: {gt_bpm:.1f} {unit}    |    "
         f"Error: {error:.1f} {unit}",
-        fontsize=13, fontweight="bold",
+        fontsize=17, fontweight="bold",
     )
 
     n_pred = len(predicted_signal)
@@ -546,20 +546,22 @@ def save_signal_comparison(
         ),
     )
 
-    ax1.set_xlabel("Time [s]")
-    ax1.set_ylabel("Normalised Amplitude")
+    ax1.set_xlabel("Time [s]", fontsize=13)
+    ax1.set_ylabel("Normalised Amplitude", fontsize=13)
     ax1.set_title(
         "Time Domain (visualisation only)\n"
-        "Heart rate estimated from frequency domain"
+        "Heart rate estimated from frequency domain",
+        fontsize=14,
     )
-    ax1.legend(loc="upper right")
+    ax1.legend(loc="upper right", fontsize=11)
     ax1.grid(True, alpha=0.3)
+    ax1.tick_params(axis="both", labelsize=11)
 
     ax1.text(
         0.02, 0.95,
         f"Error: {error:.1f} {unit}",
         transform=ax1.transAxes,
-        fontsize=12, fontweight="bold",
+        fontsize=14, fontweight="bold",
         color=(
             "green" if error < 5
             else "orange" if error < 10
@@ -608,25 +610,24 @@ def save_signal_comparison(
         if mx_gt > 0:
             fft_gt_plot = fft_gt_plot / mx_gt
 
-        # --- Actual peaks of displayed curves ---
-        
-        gt_peak_idx = np.argmax(fft_gt_plot)
-        pred_peak_idx = np.argmax(fft_pred_plot)
-        gt_peak_bpm = float(
-            bpm_plot[gt_peak_idx]
-        )
-        pred_peak_bpm = float(
-            bpm_plot[pred_peak_idx]
-        )
+        # --- Report the estimated BPM values in the legend, matching ---
+        # --- the numbers already shown in the title. We deliberately ---
+        # --- do NOT draw a vertical marker at these values: for some ---
+        # --- methods the reported BPM does not coincide with the     ---
+        # --- visual FFT peak of the plotted curve (open investigation ---
+        # --- item), and a dashed line sitting off the peak looks like ---
+        # --- a plotting bug. Once the underlying estimation pipeline  ---
+        # --- is confirmed consistent, this can be reinstated.        ---
+        gt_peak_bpm = gt_bpm
+        pred_peak_bpm = predicted_bpm
 
         ax2.plot(
             bpm_plot, fft_gt_plot,
             color="red", alpha=0.7,
             linewidth=1.5,
             label=(
-                f"GT FFT Peak: "
-                f"{gt_peak_bpm:.1f} {unit} "
-                f"(metadata: {gt_bpm:.1f})"
+                f"Ground Truth: "
+                f"{gt_peak_bpm:.1f} {unit}"
             ),
         )
         ax2.plot(
@@ -634,20 +635,9 @@ def save_signal_comparison(
             color="blue", alpha=0.7,
             linewidth=1.5,
             label=(
-                f"Predicted Peak: "
-                f"{pred_peak_bpm:.1f} {unit} "
-                f"(method: "
-                f"{predicted_bpm:.1f})"
+                f"Predicted: "
+                f"{pred_peak_bpm:.1f} {unit}"
             ),
-        )
-
-        ax2.axvline(
-            x=gt_peak_bpm, color="red",
-            linestyle="--", alpha=0.5,
-        )
-        ax2.axvline(
-            x=pred_peak_bpm, color="blue",
-            linestyle="--", alpha=0.5,
         )
 
         bp_bpm_low = bandpass[0] * 60
@@ -658,11 +648,24 @@ def save_signal_comparison(
             label="Bandpass Range",
         )
 
-    ax2.set_xlabel(f"Frequency [{unit}]")
-    ax2.set_ylabel("Normalised Magnitude")
-    ax2.set_title("Frequency Domain (FFT)")
-    ax2.legend(loc="upper right")
+        # Crop x-axis to the overlap of the plotted data range and the
+        # bandpass range, so the axis never shows a sliver beyond the
+        # green bandpass shading on either side (this can happen when
+        # the bandpass cutoff is tighter than the fixed bpm_range used
+        # for masking above).
+        xlim_low = max(bpm_plot.min(), bp_bpm_low)
+        xlim_high = min(bpm_plot.max(), bp_bpm_high)
+        if xlim_low < xlim_high:
+            ax2.set_xlim(xlim_low, xlim_high)
+        else:
+            ax2.set_xlim(bpm_plot.min(), bpm_plot.max())
+
+    ax2.set_xlabel(f"Frequency [{unit}]", fontsize=13)
+    ax2.set_ylabel("Normalised Magnitude", fontsize=13)
+    ax2.set_title("Frequency Domain (FFT)", fontsize=14)
+    ax2.legend(loc="upper right", fontsize=11)
     ax2.grid(True, alpha=0.3)
+    ax2.tick_params(axis="both", labelsize=11)
 
     plt.tight_layout()
 
